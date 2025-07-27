@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Gemma Stick</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <style>
+        #video-container {
+            position: relative;
+            width: 100%;
+            max-width: 960px;
+            margin: auto;
+            transition: box-shadow 0.3s ease-in-out;
+            max-height: 55vh; /* 뷰포트 높이의 55%로 제한 */
+            overflow: hidden; /* 내용이 넘칠 경우 숨김 */
+        }
+        #overlayCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+        }
+        #webcam {
+            width: 100%;
+            height: auto;
+            object-fit: contain; /* 비디오가 컨테이너에 맞춰지도록 설정 */
+        }
+        .vibrating {
+            animation: vibrate 0.1s linear infinite;
+        }
+        @keyframes vibrate {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            50% { transform: translateX(5px); }
+            75% { transform: translateX(-5px); }
+            100% { transform: translateX(0); }
+        }
+        .critical-alert-border {
+            box-shadow: 0 0 25px 10px rgba(239, 68, 68, 0.8); /* red-500 */
+        }
+        .recording {
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
+            70% { box-shadow: 0 0 0 20px rgba(59, 130, 246, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+        }
+        button:disabled {
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white flex flex-col min-h-screen font-sans">
+
+    <header class="bg-gray-800 p-4 text-center relative"> <!-- relative 추가 -->
+        <h1 class="text-2xl font-bold">🦯 Smart Gemma Stick</h1>
+        <!-- Alert Guide 버튼을 헤더 오른쪽 상단으로 이동 -->
+        <button id="helpButton" class="bg-gray-600 hover:bg-gray-700 text-white font-bold w-12 h-12 flex items-center justify-center rounded-full transition-colors absolute top-1/2 right-4 -translate-y-1/2">
+            <i class="fas fa-question text-xl"></i>
+        </button>
+    </header>
+
+    <main class="flex-grow container mx-auto p-4 flex flex-col items-center">
+        <div id="video-container" class="bg-black rounded-lg shadow-lg overflow-hidden">
+            <video id="webcam" class="w-full h-auto" autoplay playsinline></video>
+            <canvas id="overlayCanvas"></canvas>
+            <div id="cane-container" class="absolute top-4 right-4 z-10">
+                <img id="caneIcon" src="assets/cane_icon.png" alt="Cane Icon" class="w-16 h-16 md:w-24 md:h-24 opacity-70">
+            </div>
+        </div>
+
+        <div class="w-full max-w-4xl mt-4 p-4 bg-gray-800 rounded-lg shadow-lg">
+            <div id="statusMessage" class="text-center text-lg font-semibold mb-4 h-12 flex items-center justify-center transition-colors duration-300">
+                <div id="loadingIndicator" class="hidden items-center justify-center">
+                    <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span id="loadingText"></span>
+                </div>
+                <span id="statusText">Please start the camera.</span>
+            </div>
+            <div class="flex justify-center items-center space-x-2 md:space-x-4">
+                <button id="startButton" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 md:px-6 rounded-lg transition-colors">Start</button>
+                <button id="stopButton" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 md:px-6 rounded-lg transition-colors" disabled>Stop</button>
+                <button id="switchCameraButton" class="bg-blue-600 hover:bg-blue-700 text-white font-bold w-12 h-12 flex items-center justify-center rounded-full transition-colors" disabled>
+                    <i class="fas fa-camera-rotate text-xl"></i>
+                </button>
+                <button id="describeButton" class="bg-teal-600 hover:bg-teal-700 text-white font-bold w-12 h-12 flex items-center justify-center rounded-full transition-colors" disabled>
+                    <i class="fas fa-eye text-xl"></i>
+                </button>
+                <button id="micButton" class="bg-purple-600 hover:bg-purple-700 text-white font-bold w-12 h-12 flex items-center justify-center rounded-full transition-colors" disabled>
+                    <i class="fas fa-microphone text-xl"></i>
+                </button>
+                <!-- 음성 인식 언어 전환 버튼 -->
+                <button id="langSwitchButton" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 md:px-6 rounded-lg transition-colors text-sm" disabled>
+                    EN
+                </button>
+                <!-- Help Button은 헤더로 이동되었으므로 여기서는 제거 -->
+            </div>
+        </div>
+    </main>
+
+    <div id="helpModal" class="fixed inset-0 bg-black bg-opacity-75 hidden items-center justify-center p-4 z-50">
+        <div class="bg-gray-800 rounded-lg shadow-xl p-4 max-w-md w-full border border-gray-700">
+            <div class="flex justify-between items-center mb-3 border-b border-gray-700 pb-2">
+                <h2 class="text-xl font-bold text-white">Alert Guide</h2>
+                <button id="closeHelpModal" class="text-gray-400 hover:text-white text-3xl leading-none">&times;</button>
+            </div>
+            <div class="text-left text-sm">
+                <h3 class="text-lg font-semibold text-yellow-400 mb-1">1. Important Objects</h3>
+                <p class="text-gray-300 mb-3">The system primarily monitors the following objects:</p>
+                <div class="grid grid-cols-3 gap-2 mb-4 text-gray-200">
+                    <span class="bg-gray-700 px-2 py-1 rounded-full text-center text-xs">person</span>
+                    <span class="bg-gray-700 px-2 py-1 rounded-full text-center text-xs">car</span>
+                    <span class="bg-gray-700 px-2 py-1 rounded-full text-center text-xs">truck</span>
+                    <span class="bg-gray-700 px-2 py-1 rounded-full text-center text-xs">bus</span>
+                    <span class="bg-gray-700 px-2 py-1 rounded-full text-center text-xs">motorcycle</span>
+                    <span class="bg-gray-700 px-2 py-1 rounded-full text-center text-xs">bicycle</span>
+                </div>
+
+                <h3 class="text-lg font-semibold text-yellow-400 mb-1">2. Warning Levels</h3>
+                <p class="text-gray-300 mb-3">Alerts are triggered based on the speed of approach.</p>
+                <div class="space-y-3">
+                    <div>
+                        <p class="font-bold text-yellow-400">🟡 WARNING</p>
+                        <p class="text-gray-400 ml-4"><strong>Condition:</strong> Object is approaching.<br><strong>Trigger:</strong> Size increases by > 1.4x.</p>
+                    </div>
+                    <div>
+                        <p class="font-bold text-red-500">🔴 CRITICAL</p>
+                        <p class="text-gray-400 ml-4"><strong>Condition:</strong> Object is approaching fast.<br><strong>Trigger:</strong> Size increases by > 2.0x.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const videoContainer = document.getElementById('video-container');
+        const video = document.getElementById('webcam');
+        const overlayCanvas = document.getElementById('overlayCanvas');
+        const overlayCtx = overlayCanvas.getContext('2d');
+        const startButton = document.getElementById('startButton');
+        const stopButton = document.getElementById('stopButton');
+        const statusMessage = document.getElementById('statusMessage');
+        const caneIcon = document.getElementById('caneIcon');
+        const switchCameraButton = document.getElementById('switchCameraButton');
+        const describeButton = document.getElementById('describeButton');
+        const micButton = document.getElementById('micButton');
+        const helpButton = document.getElementById('helpButton'); // Help 버튼 변수는 그대로 유지
+        const helpModal = document.getElementById('helpModal');
+        const closeHelpModal = document.getElementById('closeHelpModal');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const loadingText = document.getElementById('loadingText');
+        const statusText = document.getElementById('statusText');
+        const langSwitchButton = document.getElementById('langSwitchButton');
+
+        let stream;
+        let audioContext;
+        let isPlayingAudio = false;
+        let currentFacingMode = 'environment';
+        let socket;
+        let isSocketOpen = false;
+        let renderedObjects = {}; 
+        let animationFrameId;
+
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let recognition;
+        let currentSpeechLang = 'en-US';
+        const supportedLangs = {
+            'en-US': 'EN',
+            'ko-KR': 'KO'
+        };
+
+        if (SpeechRecognition) {
+            recognition = new SpeechRecognition();
+            recognition.continuous = false;
+            recognition.lang = currentSpeechLang;
+            recognition.interimResults = false;
+            recognition.maxAlternatives = 1;
+            langSwitchButton.textContent = supportedLangs[currentSpeechLang];
+        } else {
+            console.log("Speech Recognition not supported.");
+            micButton.style.display = 'none';
+            langSwitchButton.style.display = 'none';
+        }
+
+        const trackColors = {};
+        const colorPalette = ["#FF5733", "#33FF57", "#3357FF", "#FF33A1", "#A133FF", "#33FFA1", "#FFC300", "#C70039"];
+        function getTrackColor(trackId) { if (!trackColors[trackId]) { trackColors[trackId] = colorPalette[Object.keys(trackColors).length % colorPalette.length]; } return trackColors[trackId]; }
+
+        const apiService = {
+            generateTts: async (text) => {
+                const formData = new URLSearchParams();
+                formData.append('text', text);
+                try {
+                    const response = await fetch('/api/generate_tts', { method: 'POST', body: formData });
+                    if (response.ok) return await response.blob();
+                } catch (error) { console.error('TTS generation error:', error); }
+                return null;
+            },
+            askQuestion: async (question, blob) => {
+                const formData = new FormData();
+                formData.append('question', question);
+                formData.append('file', blob, 'frame.jpg');
+                try {
+                    const response = await fetch('/api/ask_question', { method: 'POST', body: formData });
+                    if (response.ok) return await response.json();
+                } catch (error) { console.error('Question API error:', error); }
+                return null;
+            },
+            describeScene: async (blob) => {
+                const formData = new FormData();
+                formData.append('file', blob, 'scene.jpg');
+                try {
+                    const response = await fetch('/api/describe_scene', { method: 'POST', body: formData });
+                    if (response.ok) return await response.json();
+                } catch (error) { console.error('Describe Scene API error:', error); }
+                return null;
+            }
+        };
+
+        function showLoading(message) {
+            statusText.classList.add('hidden');
+            loadingText.textContent = message;
+            loadingIndicator.classList.remove('hidden');
+            loadingIndicator.classList.add('flex');
+            describeButton.disabled = true;
+            micButton.disabled = true;
+            langSwitchButton.disabled = true;
+        }
+
+        function hideLoading() {
+            loadingIndicator.classList.add('hidden');
+            loadingIndicator.classList.remove('flex');
+            statusText.classList.remove('hidden');
+            if (video.srcObject) {
+                describeButton.disabled = false;
+                micButton.disabled = false;
+                langSwitchButton.disabled = false;
+            }
+        }
+
+        function drawBoundingBoxes() {
+            if (!video.videoWidth) return;
+            overlayCanvas.width = video.clientWidth;
+            overlayCanvas.height = video.clientHeight;
+            overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+            
+            const analyzedWidth = 640;
+            const analyzedHeight = video.videoHeight * (analyzedWidth / video.videoWidth);
+            const scaleX = video.clientWidth / analyzedWidth;
+            const scaleY = video.clientHeight / analyzedHeight;
+
+            for (const id in renderedObjects) {
+                const obj = renderedObjects[id];
+                const color = getTrackColor(id);
+                overlayCtx.strokeStyle = color;
+                overlayCtx.lineWidth = 3;
+                
+                const x = obj.current.x * scaleX;
+                const y = obj.current.y * scaleY;
+                const width = obj.current.w * scaleX;
+                const height = obj.current.h * scaleY;
+                
+                overlayCtx.strokeRect(x, y, width, height);
+                overlayCtx.fillStyle = color;
+                
+                let label = `#${id} ${obj.label} (${(obj.confidence * 100).toFixed(1)}%)`;
+                if (obj.direction) label += ` (${obj.direction})`;
+                if (obj.size_ratio) label += ` [${obj.size_ratio.toFixed(1)}x]`;
+                
+                overlayCtx.font = '16px sans-serif';
+                const textWidth = overlayCtx.measureText(label).width;
+                overlayCtx.fillRect(x, y - 22, textWidth + 8, 22);
+                overlayCtx.fillStyle = 'white';
+                overlayCtx.fillText(label, x + 4, y - 5);
+            }
+        }
+        
+        function playAudio(audioBlob) {
+            if (isPlayingAudio) return;
+            isPlayingAudio = true;
+            const audio = new Audio();
+            const audioUrl = URL.createObjectURL(audioBlob);
+            audio.src = audioUrl;
+            audio.volume = 0.8;
+            audio.onended = () => { URL.revokeObjectURL(audioUrl); isPlayingAudio = false; };
+            audio.onerror = () => { URL.revokeObjectURL(audioUrl); isPlayingAudio = false; };
+            audio.play().catch(e => { console.error("Audio playback failed:", e); isPlayingAudio = false; });
+        }
+
+        function initializeAudioContext() {
+            if (!audioContext) {
+                try {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                } catch (e) {
+                    console.error("Web Audio API is not supported in this browser");
+                }
+            }
+        }
+
+        function playSound(type) {
+            if (!audioContext) return;
+
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+            gainNode.gain.linearRampToValueAtTime(0.5, audioContext.currentTime + 0.01);
+
+            if (type === 'warning') {
+                oscillator.type = 'triangle';
+                oscillator.frequency.setValueAtTime(880, audioContext.currentTime);
+                oscillator.start(audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.00001, audioContext.currentTime + 0.2);
+                oscillator.stop(audioContext.currentTime + 0.2);
+            } else if (type === 'critical') {
+                oscillator.type = 'square';
+                oscillator.frequency.setValueAtTime(1200, audioContext.currentTime);
+                oscillator.start(audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.00001, audioContext.currentTime + 0.1);
+                oscillator.stop(audioContext.currentTime + 0.1);
+                
+                setTimeout(() => {
+                    const oscillator2 = audioContext.createOscillator();
+                    const gainNode2 = audioContext.createGain();
+                    oscillator2.connect(gainNode2);
+                    gainNode2.connect(audioContext.destination);
+                    gainNode2.gain.setValueAtTime(0, audioContext.currentTime);
+                    gainNode2.gain.linearRampToValueAtTime(0.5, audioContext.currentTime + 0.01);
+                    oscillator2.type = 'square';
+                    oscillator2.frequency.setValueAtTime(1200, audioContext.currentTime);
+                    oscillator2.start(audioContext.currentTime);
+                    gainNode2.gain.exponentialRampToValueAtTime(0.00001, audioContext.currentTime + 0.1);
+                    oscillator2.stop(audioContext.currentTime + 0.1);
+                }, 150);
+            }
+        }
+
+        function updateStatusUI(alertLevel, message) {
+            hideLoading();
+            statusText.textContent = message || ''; 
+            statusMessage.classList.remove('text-red-500', 'text-yellow-400', 'text-white', 'font-bold');
+            videoContainer.classList.remove('critical-alert-border');
+            switch (alertLevel) {
+                case 'CRITICAL':
+                    statusText.classList.add('text-red-500', 'font-bold');
+                    videoContainer.classList.add('critical-alert-border');
+                    caneIcon.classList.add('vibrating');
+                    caneIcon.style.filter = 'drop-shadow(0 0 10px #ef4444)';
+                    playSound('critical');
+                    break;
+                case 'WARNING':
+                    statusText.classList.add('text-yellow-400');
+                    videoContainer.classList.remove('critical-alert-border');
+                    caneIcon.classList.add('vibrating');
+                    caneIcon.style.filter = 'drop-shadow(0 0 10px #facc15)';
+                    playSound('warning');
+                    break;
+                case 'INFO':
+                    statusText.classList.add('text-white');
+                    caneIcon.classList.remove('vibrating');
+                    caneIcon.style.filter = 'none';
+                    break;
+                default:
+                    statusText.classList.add('text-white');
+                    caneIcon.classList.remove('vibrating');
+                    caneIcon.style.filter = 'none';
+                    break;
+            }
+        }
+
+        function animate() {
+            const LERP_FACTOR = 0.2;
+            let needsRedraw = false;
+            for (const id in renderedObjects) {
+                const obj = renderedObjects[id];
+                obj.current.x += (obj.target.x - obj.current.x) * LERP_FACTOR;
+                obj.current.y += (obj.target.y - obj.current.y) * LERP_FACTOR;
+                obj.current.w += (obj.target.w - obj.current.w) * LERP_FACTOR;
+                obj.current.h += (obj.target.h - obj.current.h) * LERP_FACTOR;
+                if (Math.abs(obj.target.x - obj.current.x) > 0.1 || Math.abs(obj.target.y - obj.current.y) > 0.1) {
+                    needsRedraw = true;
+                }
+            }
+            if (needsRedraw) drawBoundingBoxes();
+            animationFrameId = requestAnimationFrame(animate);
+        }
+
+        function sendFrame() {
+            if (!isSocketOpen || !video.srcObject || video.paused || video.ended) return;
+            const MAX_WIDTH = 640;
+            const scale = MAX_WIDTH / video.videoWidth;
+            const captureCanvas = document.createElement('canvas');
+            captureCanvas.width = MAX_WIDTH;
+            captureCanvas.height = video.videoHeight * scale;
+            const ctx = captureCanvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, captureCanvas.width, captureCanvas.height);
+            captureCanvas.toBlob((blob) => {
+                if (blob && socket.readyState === WebSocket.OPEN) socket.send(blob);
+            }, 'image/jpeg', 0.8);
+        }
+
+        function connectWebSocket() {
+            const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${wsProtocol}//${window.location.host}/api/ws/analyze`;
+            socket = new WebSocket(wsUrl);
+
+            socket.onopen = () => {
+                console.log("WebSocket connected.");
+                isSocketOpen = true;
+                updateStatusUI('INFO', 'Real-time analysis started.');
+                sendFrame(); 
+            };
+
+            socket.onmessage = async (event) => {
+                const result = JSON.parse(event.data);
+                if (result) {
+                    const received_ids = new Set();
+                    result.objects.forEach(obj => {
+                        received_ids.add(obj.track_id.toString());
+                        const newBox = { x: obj.box.x1, y: obj.box.y1, w: obj.box.x2 - obj.box.x1, h: obj.box.y2 - obj.box.y1 };
+                        if (!renderedObjects[obj.track_id]) {
+                            renderedObjects[obj.track_id] = { current: newBox, target: newBox, label: obj.label, confidence: obj.confidence, size_ratio: obj.size_ratio, direction: obj.direction };
+                        } else {
+                            renderedObjects[obj.track_id].target = newBox;
+                            renderedObjects[obj.track_id].label = obj.label;
+                            renderedObjects[obj.track_id].confidence = obj.confidence;
+                            renderedObjects[obj.track_id].size_ratio = obj.size_ratio;
+                            renderedObjects[obj.track_id].direction = obj.direction;
+                        }
+                    });
+                    for (const id in renderedObjects) {
+                        if (!received_ids.has(id)) delete renderedObjects[id];
+                    }
+                    updateStatusUI(result.alert_level, result.guide_message);
+                    if (result.guide_message && !isPlayingAudio) {
+                        const audioBlob = await apiService.generateTts(result.guide_message);
+                        if (audioBlob) playAudio(audioBlob);
+                    }
+                }
+                if (isSocketOpen) sendFrame();
+            };
+
+            socket.onclose = () => { console.log("WebSocket disconnected."); isSocketOpen = false; };
+            socket.onerror = (error) => { console.error("WebSocket error:", error); updateStatusUI('CRITICAL', 'Connection to server lost.'); isSocketOpen = false; };
+        }
+
+        async function startCamera() {
+            if (stream) { stream.getTracks().forEach(track => track.stop()); }
+            const constraints = { video: { facingMode: currentFacingMode }, audio: false };
+            try {
+                stream = await navigator.mediaDevices.getUserMedia(constraints);
+                video.srcObject = stream;
+                startButton.disabled = true; 
+                stopButton.disabled = false; 
+                switchCameraButton.disabled = false; 
+                describeButton.disabled = false;
+                micButton.disabled = false;
+                langSwitchButton.disabled = false;
+                animate();
+                connectWebSocket();
+            } catch (err) {
+                console.error("Camera access error:", err);
+                updateStatusUI('NONE', `Camera error: ${err.name}.`);
+                startButton.disabled = false; 
+                stopButton.disabled = true; 
+                switchCameraButton.disabled = true; 
+                describeButton.disabled = true;
+                micButton.disabled = true;
+                langSwitchButton.disabled = true;
+            }
+        }
+
+        startButton.addEventListener('click', async () => { initializeAudioContext(); await startCamera(); });
+
+        stopButton.addEventListener('click', () => {
+            if (stream) { stream.getTracks().forEach(track => track.stop()); }
+            if (socket) socket.close();
+            cancelAnimationFrame(animationFrameId);
+            renderedObjects = {};
+            overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+            video.srcObject = null;
+            startButton.disabled = false; 
+            stopButton.disabled = true; 
+            switchCameraButton.disabled = true; 
+            describeButton.disabled = true;
+            micButton.disabled = true;
+            langSwitchButton.disabled = true;
+            updateStatusUI('NONE', 'Analysis stopped.');
+        });
+
+        switchCameraButton.addEventListener('click', async () => { 
+            if (socket) socket.close();
+            cancelAnimationFrame(animationFrameId);
+            renderedObjects = {};
+            currentFacingMode = currentFacingMode === 'environment' ? 'user' : 'environment';
+            await startCamera(); 
+        });
+        
+        helpButton.addEventListener('click', () => { // helpButton 이벤트 리스너는 그대로 유지
+            helpModal.classList.remove('hidden');
+            helpModal.classList.add('flex');
+        });
+
+        closeHelpModal.addEventListener('click', () => {
+            helpModal.classList.add('hidden');
+            helpModal.classList.remove('flex');
+        });
+        
+        helpModal.addEventListener('click', (e) => {
+            if (e.target === helpModal) {
+                helpModal.classList.add('hidden');
+                helpModal.classList.remove('flex');
+            }
+        });
+        
+        describeButton.addEventListener('click', async () => {
+            if (isPlayingAudio) return;
+            
+            showLoading('Analyzing the scene...');
+
+            const MAX_WIDTH = 640;
+            const scale = MAX_WIDTH / video.videoWidth;
+            const captureCanvas = document.createElement('canvas');
+            captureCanvas.width = MAX_WIDTH;
+            captureCanvas.height = video.videoHeight * scale;
+            captureCanvas.getContext('2d').drawImage(video, 0, 0, captureCanvas.width, captureCanvas.height);
+
+            captureCanvas.toBlob(async (blob) => {
+                if (blob) {
+                    const result = await apiService.describeScene(blob);
+                    if (result && result.answer) {
+                        updateStatusUI('INFO', result.answer);
+                        const audioBlob = await apiService.generateTts(result.answer);
+                        if (audioBlob) playAudio(audioBlob);
+                    } else {
+                        updateStatusUI('WARNING', "Could not describe the scene.");
+                    }
+                } else {
+                    hideLoading();
+                }
+            }, 'image/jpeg', 0.9);
+        });
+
+        if (recognition) {
+            langSwitchButton.addEventListener('click', () => {
+                const langs = Object.keys(supportedLangs);
+                const currentIndex = langs.indexOf(currentSpeechLang);
+                const nextIndex = (currentIndex + 1) % langs.length;
+                currentSpeechLang = langs[nextIndex];
+                recognition.lang = currentSpeechLang;
+                langSwitchButton.textContent = supportedLangs[currentSpeechLang];
+                updateStatusUI('INFO', `Speech recognition language set to ${supportedLangs[currentSpeechLang]}.`);
+                console.log(`Speech recognition language set to: ${currentSpeechLang}`);
+            });
+
+            micButton.addEventListener('click', () => {
+                if (isPlayingAudio) return;
+                try {
+                    recognition.start();
+                } catch (e) {
+                    console.error("Speech recognition start error:", e);
+                    updateStatusUI('WARNING', 'Could not start speech recognition.');
+                }
+            });
+
+            recognition.onstart = () => {
+                micButton.classList.add('recording');
+                micButton.classList.remove('bg-purple-600', 'hover:bg-purple-700');
+                micButton.classList.add('bg-blue-500');
+            };
+
+            recognition.onresult = async (event) => {
+                const question = event.results[0][0].transcript;
+                
+                showLoading(`Generating answer for "${question}"...`);
+
+                const MAX_WIDTH = 640;
+                const scale = MAX_WIDTH / video.videoWidth;
+                const captureCanvas = document.createElement('canvas');
+                captureCanvas.width = MAX_WIDTH;
+                captureCanvas.height = video.videoHeight * scale;
+                captureCanvas.getContext('2d').drawImage(video, 0, 0, captureCanvas.width, captureCanvas.height);
+
+                captureCanvas.toBlob(async (blob) => {
+                    if (blob) {
+                        const result = await apiService.askQuestion(question, blob);
+                        if (result && result.answer) {
+                            updateStatusUI('INFO', result.answer);
+                            const audioBlob = await apiService.generateTts(result.answer);
+                            if (audioBlob) playAudio(audioBlob);
+                        } else {
+                            updateStatusUI('WARNING', "Could not find an answer.");
+                        }
+                    } else {
+                        hideLoading();
+                    }
+                }, 'image/jpeg', 0.9);
+            };
+
+            recognition.onend = () => {
+                micButton.classList.remove('recording');
+                micButton.classList.remove('bg-blue-500');
+                micButton.classList.add('bg-purple-600', 'hover:bg-purple-700');
+            };
+
+            recognition.onerror = (event) => {
+                console.error('Speech recognition error:', event.error);
+                updateStatusUI('WARNING', 'Speech recognition error occurred.');
+                micButton.classList.remove('recording');
+                micButton.classList.remove('bg-blue-500');
+                micButton.classList.add('bg-purple-600', 'hover:bg-purple-700');
+            };
+        }
+    </script>
+</body>
+</html>
