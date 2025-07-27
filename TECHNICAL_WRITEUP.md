@@ -1,14 +1,14 @@
-# Technical Write-up: Smart Gemma Stick
+# Technical Write-up: Smart Eyes with Gemma
 
 ## 1. Introduction
 
-The Smart Gemma Stick is an innovative assistive system designed to enhance the independence and safety of visually impaired individuals. This project leverages cutting-edge on-device AI capabilities, specifically Google's Gemma 3n and Gemma 3 models via Ollama, combined with real-time object detection (YOLOv11) and high-quality speech synthesis (Piper TTS). Our goal is to provide a comprehensive, private, and real-time environmental awareness solution that goes beyond traditional assistive devices.
+Smart Eyes with Gemma is an innovative assistive system designed to enhance the independence and safety of visually impaired individuals. This project leverages cutting-edge on-device AI capabilities, specifically Google's Gemma 3n and Gemma 3 models via Ollama, combined with real-time object detection (YOLOv11) and high-quality speech synthesis (Piper TTS). Our goal is to provide a comprehensive, private, and real-time environmental awareness solution that goes beyond traditional assistive devices.
 
-This technical write-up details the architecture, implementation, and the specific utilization of Gemma models within the Smart Gemma Stick, highlighting the challenges overcome and the rationale behind our technical decisions. **While the ultimate vision for the Smart Gemma Stick is to be an embedded system directly integrated into a smart cane or similar wearable device for seamless, always-on assistance, this current implementation is developed as a web-based application. This approach was chosen to overcome immediate technical constraints related to hardware integration and to facilitate an accessible online demo for this competition.**
+This technical write-up details the architecture, implementation, and the specific utilization of Gemma models within Smart Eyes with Gemma, highlighting the challenges overcome and the rationale behind our technical decisions. **While the ultimate vision for Smart Eyes with Gemma is to be an embedded system directly integrated into smart assistive devices such as intelligent canes, smart glasses, or purpose-built wearable devices for seamless, always-on assistance, this current implementation is developed as a web-based application. This approach was chosen to overcome immediate technical constraints related to hardware integration and to facilitate an accessible online demo for the Gemma 3n Impact Challenge, while demonstrating the viability of Gemma 3n's on-device capabilities for future embedded deployment.**
 
 ## 2. System Architecture
 
-The Smart Gemma Stick operates on a client-server architecture, enabling real-time video processing and AI-powered voice guidance.
+Smart Eyes with Gemma operates on a client-server architecture, enabling real-time video processing and AI-powered voice guidance.
 
 ```mermaid
 graph TD
@@ -87,7 +87,7 @@ Our frontend design prioritizes accessibility and a clear user experience for vi
 - **Multilingual Support**: The ability to dynamically switch between English and Korean for speech recognition (`langSwitchButton`) enhances usability for a broader user base and caters to diverse linguistic needs.
 - **Accessible Button Design**: Control buttons are designed to be large, clearly labeled (with icons), and well-spaced, making them easy to locate and activate by touch or with screen readers.
 
-*A screenshot of the Smart Gemma Stick's main web interface, showing the video feed, overlay, and control buttons.*
+*A screenshot of the Smart Eyes with Gemma's main web interface, showing the video feed, overlay, and control buttons.*
 
 ### 2.2. Backend (Server-side - FastAPI)
 
@@ -270,13 +270,16 @@ This dual-model approach allows us to optimize for both speed (Gemma 3n for quic
 
 ## 6. Conclusion
 
-The Smart Gemma Stick represents a significant step towards practical, impactful on-device AI for accessibility. By meticulously integrating YOLOv11, Ollama-served Gemma 3n and Gemma 3, and Piper TTS, we have built a robust system that offers real-time environmental awareness and intelligent voice interaction. Our focus on local execution ensures privacy and reliability, demonstrating the transformative potential of compact, multimodal AI in addressing real-world challenges for the visually impaired.
+Smart Eyes with Gemma represents a significant step towards practical, impactful on-device AI for accessibility. By meticulously integrating YOLOv11, Ollama-served Gemma 3n and Gemma 3, and Piper TTS, we have built a robust system that offers real-time environmental awareness and intelligent voice interaction. Our focus on local execution ensures privacy and reliability, demonstrating the transformative potential of compact, multimodal AI in addressing real-world challenges for the visually impaired.
+
+**Alignment with Gemma 3n Impact Challenge Goals:**
+This project directly embodies the core principles of the Gemma 3n Impact Challenge by leveraging Gemma 3n's unique on-device, offline, and multimodal capabilities to create meaningful social impact. Our implementation showcases how advanced AI can be made accessible and practical for assistive technology, with architecture designed for future embedded deployment in real-world devices.
 
 ## 7. Future Work
 
-Our commitment to enhancing the Smart Gemma Stick continues beyond this initial implementation. Key areas for future development include:
+Our commitment to enhancing Smart Eyes with Gemma continues beyond this initial implementation. Key areas for future development include:
 
-- **Embedded System Integration**: While the current web-based implementation serves as an effective demo and proof-of-concept, the ideal deployment for the Smart Gemma Stick is as an **embedded system**. We plan to explore integrating the core AI and processing logic directly into dedicated hardware, such as a custom-designed smart cane or existing assistive devices like Google Smart Glass. This would enable a more seamless, portable, and always-on user experience, truly realizing the vision of an intelligent companion for the visually impaired.
+- **Embedded System Integration**: While the current web-based implementation serves as an effective demo and proof-of-concept, the ideal deployment for Smart Eyes with Gemma is as an **embedded system**. We plan to explore integrating the core AI and processing logic directly into dedicated hardware, such as a custom-designed smart device or existing assistive devices like smart glasses. This would enable a more seamless, portable, and always-on user experience, truly realizing the vision of an intelligent companion for the visually impaired.
 - **Gemma Model Consolidation**: We aim to simplify the AI model architecture. **Should future versions of Gemma 3n, when served via Ollama, demonstrate improved and robust image recognition capabilities, we plan to consolidate our AI backend to exclusively utilize Gemma 3n. This would further optimize the memory footprint and streamline model management while maintaining comprehensive multimodal functionality.**
 - **Advanced Navigation Features**: Integrating more sophisticated environmental understanding, such as detecting stairs, curbs, and varying terrain, to provide more nuanced navigation guidance.
 - **Enhanced User Customization**: Allowing users to personalize alert sensitivity, voice preferences, and object prioritization.

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Gemma Stick</title>
+    <title>Smart Eyes with Gemma</title> <!-- 프로젝트 이름 변경 -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <style>
@@ -48,6 +48,7 @@
             70% { box-shadow: 0 0 0 20px rgba(59, 130, 246, 0); }
             100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
         }
+        /* [추가] 버튼 비활성화 시 스타일 */
         button:disabled {
             cursor: not-allowed;
             opacity: 0.6;
@@ -56,9 +57,8 @@
 </head>
 <body class="bg-gray-900 text-white flex flex-col min-h-screen font-sans">
 
-    <header class="bg-gray-800 p-4 text-center relative"> <!-- relative 추가 -->
-        <h1 class="text-2xl font-bold">🦯 Smart Gemma Stick</h1>
-        <!-- Alert Guide 버튼을 헤더 오른쪽 상단으로 이동 -->
+    <header class="bg-gray-800 p-4 text-center relative">
+        <h1 class="text-2xl font-bold">🦯 Smart Eyes with Gemma</h1> <!-- 프로젝트 이름 변경 -->
         <button id="helpButton" class="bg-gray-600 hover:bg-gray-700 text-white font-bold w-12 h-12 flex items-center justify-center rounded-full transition-colors absolute top-1/2 right-4 -translate-y-1/2">
             <i class="fas fa-question text-xl"></i>
         </button>
@@ -96,11 +96,9 @@
                 <button id="micButton" class="bg-purple-600 hover:bg-purple-700 text-white font-bold w-12 h-12 flex items-center justify-center rounded-full transition-colors" disabled>
                     <i class="fas fa-microphone text-xl"></i>
                 </button>
-                <!-- 음성 인식 언어 전환 버튼 -->
                 <button id="langSwitchButton" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 md:px-6 rounded-lg transition-colors text-sm" disabled>
                     EN
                 </button>
-                <!-- Help Button은 헤더로 이동되었으므로 여기서는 제거 -->
             </div>
         </div>
     </main>
@@ -124,7 +122,7 @@
                 </div>
 
                 <h3 class="text-lg font-semibold text-yellow-400 mb-1">2. Warning Levels</h3>
-                <p class="text-gray-300 mb-3">Alerts are triggered based on the speed of approach.</p>
+                <p class="text-gray-300 ml-4"><strong>Condition:</strong> Object is approaching.<br><strong>Trigger:</strong> Size increases by > 1.4x.</p>
                 <div class="space-y-3">
                     <div>
                         <p class="font-bold text-yellow-400">🟡 WARNING</p>
@@ -151,7 +149,7 @@
         const switchCameraButton = document.getElementById('switchCameraButton');
         const describeButton = document.getElementById('describeButton');
         const micButton = document.getElementById('micButton');
-        const helpButton = document.getElementById('helpButton'); // Help 버튼 변수는 그대로 유지
+        const helpButton = document.getElementById('helpButton');
         const helpModal = document.getElementById('helpModal');
         const closeHelpModal = document.getElementById('closeHelpModal');
         const loadingIndicator = document.getElementById('loadingIndicator');
@@ -165,7 +163,7 @@
         let currentFacingMode = 'environment';
         let socket;
         let isSocketOpen = false;
-        let renderedObjects = {}; 
+        let renderedObjects = {};
         let animationFrameId;
 
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -250,7 +248,7 @@
             overlayCanvas.width = video.clientWidth;
             overlayCanvas.height = video.clientHeight;
             overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-            
+
             const analyzedWidth = 640;
             const analyzedHeight = video.videoHeight * (analyzedWidth / video.videoWidth);
             const scaleX = video.clientWidth / analyzedWidth;
@@ -261,19 +259,19 @@
                 const color = getTrackColor(id);
                 overlayCtx.strokeStyle = color;
                 overlayCtx.lineWidth = 3;
-                
+
                 const x = obj.current.x * scaleX;
                 const y = obj.current.y * scaleY;
                 const width = obj.current.w * scaleX;
                 const height = obj.current.h * scaleY;
-                
+
                 overlayCtx.strokeRect(x, y, width, height);
                 overlayCtx.fillStyle = color;
-                
+
                 let label = `#${id} ${obj.label} (${(obj.confidence * 100).toFixed(1)}%)`;
                 if (obj.direction) label += ` (${obj.direction})`;
                 if (obj.size_ratio) label += ` [${obj.size_ratio.toFixed(1)}x]`;
-                
+
                 overlayCtx.font = '16px sans-serif';
                 const textWidth = overlayCtx.measureText(label).width;
                 overlayCtx.fillRect(x, y - 22, textWidth + 8, 22);
@@ -281,7 +279,7 @@
                 overlayCtx.fillText(label, x + 4, y - 5);
             }
         }
-        
+
         function playAudio(audioBlob) {
             if (isPlayingAudio) return;
             isPlayingAudio = true;
@@ -327,7 +325,7 @@
                 oscillator.start(audioContext.currentTime);
                 gainNode.gain.exponentialRampToValueAtTime(0.00001, audioContext.currentTime + 0.1);
                 oscillator.stop(audioContext.currentTime + 0.1);
-                
+
                 setTimeout(() => {
                     const oscillator2 = audioContext.createOscillator();
                     const gainNode2 = audioContext.createGain();
@@ -346,7 +344,7 @@
 
         function updateStatusUI(alertLevel, message) {
             hideLoading();
-            statusText.textContent = message || ''; 
+            statusText.textContent = message || '';
             statusMessage.classList.remove('text-red-500', 'text-yellow-400', 'text-white', 'font-bold');
             videoContainer.classList.remove('critical-alert-border');
             switch (alertLevel) {
@@ -378,6 +376,10 @@
         }
 
         function animate() {
+            if (!video.videoWidth) { // 비디오가 로드되지 않았으면 그리지 않음
+                animationFrameId = requestAnimationFrame(animate);
+                return;
+            }
             const LERP_FACTOR = 0.2;
             let needsRedraw = false;
             for (const id in renderedObjects) {
@@ -417,7 +419,7 @@
                 console.log("WebSocket connected.");
                 isSocketOpen = true;
                 updateStatusUI('INFO', 'Real-time analysis started.');
-                sendFrame(); 
+                sendFrame();
             };
 
             socket.onmessage = async (event) => {
@@ -459,9 +461,9 @@
             try {
                 stream = await navigator.mediaDevices.getUserMedia(constraints);
                 video.srcObject = stream;
-                startButton.disabled = true; 
-                stopButton.disabled = false; 
-                switchCameraButton.disabled = false; 
+                startButton.disabled = true;
+                stopButton.disabled = false;
+                switchCameraButton.disabled = false;
                 describeButton.disabled = false;
                 micButton.disabled = false;
                 langSwitchButton.disabled = false;
@@ -470,9 +472,9 @@
             } catch (err) {
                 console.error("Camera access error:", err);
                 updateStatusUI('NONE', `Camera error: ${err.name}.`);
-                startButton.disabled = false; 
-                stopButton.disabled = true; 
-                switchCameraButton.disabled = true; 
+                startButton.disabled = false;
+                stopButton.disabled = true;
+                switchCameraButton.disabled = true;
                 describeButton.disabled = true;
                 micButton.disabled = true;
                 langSwitchButton.disabled = true;
@@ -488,24 +490,24 @@
             renderedObjects = {};
             overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
             video.srcObject = null;
-            startButton.disabled = false; 
-            stopButton.disabled = true; 
-            switchCameraButton.disabled = true; 
+            startButton.disabled = false;
+            stopButton.disabled = true;
+            switchCameraButton.disabled = true;
             describeButton.disabled = true;
             micButton.disabled = true;
             langSwitchButton.disabled = true;
             updateStatusUI('NONE', 'Analysis stopped.');
         });
 
-        switchCameraButton.addEventListener('click', async () => { 
+        switchCameraButton.addEventListener('click', async () => {
             if (socket) socket.close();
             cancelAnimationFrame(animationFrameId);
             renderedObjects = {};
             currentFacingMode = currentFacingMode === 'environment' ? 'user' : 'environment';
-            await startCamera(); 
+            await startCamera();
         });
-        
-        helpButton.addEventListener('click', () => { // helpButton 이벤트 리스너는 그대로 유지
+
+        helpButton.addEventListener('click', () => {
             helpModal.classList.remove('hidden');
             helpModal.classList.add('flex');
         });
@@ -514,17 +516,17 @@
             helpModal.classList.add('hidden');
             helpModal.classList.remove('flex');
         });
-        
+
         helpModal.addEventListener('click', (e) => {
             if (e.target === helpModal) {
                 helpModal.classList.add('hidden');
                 helpModal.classList.remove('flex');
             }
         });
-        
+
         describeButton.addEventListener('click', async () => {
             if (isPlayingAudio) return;
-            
+
             showLoading('Analyzing the scene...');
 
             const MAX_WIDTH = 640;
@@ -580,7 +582,7 @@
 
             recognition.onresult = async (event) => {
                 const question = event.results[0][0].transcript;
-                
+
                 showLoading(`Generating answer for "${question}"...`);
 
                 const MAX_WIDTH = 640;

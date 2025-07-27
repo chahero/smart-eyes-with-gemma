@@ -1,8 +1,8 @@
-# Smart Gemma Stick
+# Smart Eyes with Gemma
 
 An intelligent assistive system for the visually impaired, combining real-time object detection (YOLO), AI-powered situational analysis (Gemma), and high-quality voice guidance (Piper TTS).
 
-This smart stick application provides real-time environmental awareness through webcam-based object detection, AI-driven safety analysis, and natural voice guidance to help visually impaired users navigate safely.
+This smart vision application provides real-time environmental awareness through webcam-based object detection, AI-driven safety analysis, and natural voice guidance to help visually impaired users navigate safely.
 
 This project is submitted as a demo source for **The Gemma 3n Impact Challenge** on Kaggle: https://www.kaggle.com/competitions/google-gemma-3n-hackathon/overview
 
@@ -41,8 +41,8 @@ This project is submitted as a demo source for **The Gemma 3n Impact Challenge**
 ### 1. Clone Repository
 
 ```
-git clone https://github.com/your-username/smart-gemma-stick.git # Repository name updated
-cd smart-gemma-stick
+git clone https://github.com/your-username/smart-eyes-with-gemma.git
+cd smart-eyes-with-gemma
 ```
 
 ### 2. Install Python Dependencies
@@ -146,9 +146,23 @@ Open your web browser and navigate to the backend server's address (e.g., `http:
 - **Camera**: USB webcam or integrated camera
 - **OS**: Windows 10/11, macOS, or Linux (ensure Piper TTS executable is compatible)
 
+## 🔮 Future Vision
+
+While Smart Eyes with Gemma currently operates as a web-based demonstration, our long-term vision extends far beyond the browser. The architecture and AI capabilities we've developed are designed with embedded deployment in mind, positioning this project for integration into real-world assistive devices.
+
+**Potential Hardware Integration Opportunities:**
+- **Smart Canes**: Embedding the core AI logic into intelligent walking aids with built-in cameras and speakers
+- **Smart Glasses**: Integration with AR/VR eyewear for seamless, hands-free environmental awareness
+- **Wearable Devices**: Deployment on compact, purpose-built assistive hardware for visually impaired users
+- **Mobile Edge Devices**: Leveraging Gemma 3n's on-device capabilities for truly offline, private assistance
+
+This web-based implementation serves as a proof-of-concept that demonstrates the viability of local AI processing using Gemma 3n's edge-optimized architecture. The system's design prioritizes the same principles that would be essential in embedded applications: privacy-first local processing, low-latency real-time analysis, and efficient resource utilization.
+
+By participating in the Gemma 3n Impact Challenge, we're showcasing how advanced multimodal AI can be made accessible and practical for assistive technology, paving the way for next-generation devices that truly enhance independence for visually impaired individuals.
+
 ## 🤝 Contributing
 
-We welcome contributions to the Smart Gemma Stick project! Please follow these steps:
+We welcome contributions to the Smart Eyes with Gemma project! Please follow these steps:
 
 1. Fork the repository.
 2. Create a new feature branch (`git checkout -b feature/your-feature-name`).

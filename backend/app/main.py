@@ -8,7 +8,7 @@ from .api import router
 import os
 
 app = FastAPI(
-    title="Smart Gemma Stick API",
+    title="Smart Eyes with Gemma API",
     description="Backend server for real-time video analysis and voice guidance",
     version="1.0.0"
 )
@@ -51,7 +51,7 @@ async def serve_temp_image(filename: str):
 @app.get("/status", summary="Check server status")
 def read_root():
     """Endpoint to check if the server is running correctly."""
-    return {"status": "Smart Gemma Stick API is running!"}
+    return {"status": "Smart Eyes with Gemma API is running!"}
 
 app.include_router(router, prefix="/api")
 
