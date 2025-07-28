@@ -1,0 +1,1157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Eyes with Gemma - Video Demo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <style>
+        #video-container {
+            position: relative;
+            width: 100%;
+            max-width: 960px;
+            margin: auto;
+            transition: box-shadow 0.3s ease-in-out;
+            max-height: 55vh;
+            overflow: hidden;
+        }
+        
+        /* 가로 동영상 (16:9) */
+        #video-container.landscape-video {
+            max-height: 55vh;
+            max-width: 960px;
+        }
+        
+        /* 세로 동영상 (9:16) */
+        #video-container.portrait-video {
+            max-height: 80vh;
+            max-width: 45vw;
+        }
+        #overlayCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+        }
+        #videoPlayer {
+            width: 100%;
+            height: auto;
+            object-fit: contain;
+        }
+        .vibrating {
+            animation: vibrate 0.1s linear infinite;
+        }
+        @keyframes vibrate {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            50% { transform: translateX(5px); }
+            75% { transform: translateX(-5px); }
+            100% { transform: translateX(0); }
+        }
+        .critical-alert-border {
+            box-shadow: 0 0 25px 10px rgba(239, 68, 68, 0.8);
+        }
+        .recording {
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
+            70% { box-shadow: 0 0 0 20px rgba(59, 130, 246, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+        }
+        button:disabled {
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+        }
+        .file-input-wrapper input[type=file] {
+            position: absolute;
+            left: -9999px;
+        }
+        .file-input-label {
+            cursor: pointer;
+            display: inline-block;
+            padding: 8px 16px;
+            background: #3b82f6;
+            color: white;
+            border-radius: 8px;
+            transition: background-color 0.3s;
+        }
+        .file-input-label:hover {
+            background: #2563eb;
+        }
+        .drop-zone {
+            border: 2px dashed #6b7280;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        .drop-zone:hover {
+            border-color: #3b82f6;
+            background-color: rgba(59, 130, 246, 0.1);
+        }
+        .drop-zone.drag-over {
+            border-color: #3b82f6;
+            background-color: rgba(59, 130, 246, 0.2);
+            transform: scale(1.02);
+        }
+        .debug-log {
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.3;
+        }
+        .debug-log::-webkit-scrollbar {
+            width: 8px;
+        }
+        .debug-log::-webkit-scrollbar-track {
+            background: #374151;
+        }
+        .debug-log::-webkit-scrollbar-thumb {
+            background: #6b7280;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white flex flex-col min-h-screen font-sans">
+
+    <header class="bg-gray-800 p-4 text-center relative">
+        <h1 class="text-2xl font-bold">🎥 Smart Eyes with Gemma - Video Demo</h1>
+        <button id="helpButton" class="bg-gray-600 hover:bg-gray-700 text-white font-bold w-12 h-12 flex items-center justify-center rounded-full transition-colors absolute top-1/2 right-4 -translate-y-1/2">
+            <i class="fas fa-question text-xl"></i>
+        </button>
+    </header>
+
+    <main class="flex-grow container mx-auto p-4 flex flex-col items-center">
+        <!-- Video Upload Section -->
+        <div id="dropZone" class="w-full max-w-4xl mb-4 p-6 bg-gray-800 rounded-lg shadow-lg drop-zone">
+            <h2 class="text-lg font-semibold mb-3 text-center">Upload Video File</h2>
+            <div class="flex flex-col items-center justify-center space-y-4">
+                <div class="text-center">
+                    <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-2"></i>
+                    <p class="text-gray-300 mb-2">Drag and drop your video file here</p>
+                    <p class="text-gray-500 text-sm">or</p>
+                </div>
+                <div class="flex flex-col sm:flex-row items-center justify-center space-y-2 sm:space-y-0 sm:space-x-4">
+                    <div class="file-input-wrapper">
+                        <input type="file" id="videoInput" accept="video/*">
+                        <label for="videoInput" class="file-input-label">
+                            <i class="fas fa-upload mr-2"></i>Choose Video File
+                        </label>
+                    </div>
+                    <span id="fileName" class="text-gray-400 text-sm">No file selected</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="video-container" class="bg-black rounded-lg shadow-lg overflow-hidden">
+            <video id="videoPlayer" class="w-full h-auto" controls></video>
+            <canvas id="overlayCanvas"></canvas>
+            <div id="cane-container" class="absolute top-4 right-4 z-10">
+                <img id="caneIcon" src="assets/cane_icon.png" alt="Cane Icon" class="w-16 h-16 md:w-24 md:h-24 opacity-70">
+            </div>
+        </div>
+
+        <div class="w-full max-w-4xl mt-4 p-4 bg-gray-800 rounded-lg shadow-lg">
+            <div id="statusMessage" class="text-center text-lg font-semibold mb-4 h-12 flex items-center justify-center transition-colors duration-300">
+                <div id="loadingIndicator" class="hidden items-center justify-center">
+                    <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span id="loadingText"></span>
+                </div>
+                <span id="statusText">Please upload a video file to begin analysis.</span>
+            </div>
+            <div class="flex justify-center items-center space-x-2 md:space-x-4">
+                <button id="startAnalysisButton" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 md:px-6 rounded-lg transition-colors" disabled>Start Analysis</button>
+                <button id="stopAnalysisButton" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 md:px-6 rounded-lg transition-colors" disabled>Stop Analysis</button>
+                <button id="describeButton" class="bg-teal-600 hover:bg-teal-700 text-white font-bold w-12 h-12 flex items-center justify-center rounded-full transition-colors" disabled>
+                    <i class="fas fa-eye text-xl"></i>
+                </button>
+                <button id="micButton" class="bg-purple-600 hover:bg-purple-700 text-white font-bold w-12 h-12 flex items-center justify-center rounded-full transition-colors" disabled>
+                    <i class="fas fa-microphone text-xl"></i>
+                </button>
+                <button id="langSwitchButton" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 md:px-6 rounded-lg transition-colors text-sm" disabled>
+                    EN
+                </button>
+                <button id="toggleLogButton" class="bg-gray-600 hover:bg-gray-700 text-white font-bold w-12 h-12 flex items-center justify-center rounded-full transition-colors">
+                    <i class="fas fa-terminal text-xl"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Debug Log Section -->
+        <div id="debugLogContainer" class="w-full max-w-4xl mt-4 p-4 bg-gray-800 rounded-lg shadow-lg hidden">
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="text-lg font-semibold text-white">Debug Log</h3>
+                <div class="flex space-x-2">
+                    <button id="clearTTSButton" class="bg-yellow-600 hover:bg-yellow-700 text-white text-sm px-3 py-1 rounded transition-colors">
+                        Clear TTS
+                    </button>
+                    <button id="clearLogButton" class="bg-red-600 hover:bg-red-700 text-white text-sm px-3 py-1 rounded transition-colors">
+                        Clear
+                    </button>
+                </div>
+            </div>
+            <div id="debugLog" class="debug-log bg-gray-900 p-3 rounded border text-green-400">
+                <div class="text-gray-500">Debug log initialized...</div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Help Modal -->
+    <div id="helpModal" class="fixed inset-0 bg-black bg-opacity-75 hidden items-center justify-center p-4 z-50">
+        <div class="bg-gray-800 rounded-lg shadow-xl p-4 max-w-md w-full border border-gray-700">
+            <div class="flex justify-between items-center mb-3 border-b border-gray-700 pb-2">
+                <h2 class="text-xl font-bold text-white">Video Demo Guide</h2>
+                <button id="closeHelpModal" class="text-gray-400 hover:text-white text-3xl leading-none">&times;</button>
+            </div>
+            <div class="text-left text-sm">
+                <h3 class="text-lg font-semibold text-yellow-400 mb-1">How to Use</h3>
+                <p class="text-gray-300 mb-3">1. Upload a video file using the "Choose Video File" button</p>
+                <p class="text-gray-300 mb-3">2. Click "Start Analysis" to begin real-time AI analysis</p>
+                <p class="text-gray-300 mb-3">3. Play the video to see AI detection and guidance in action</p>
+                <p class="text-gray-300 mb-4">4. Use "Describe Scene" and microphone buttons during playback</p>
+
+                <h3 class="text-lg font-semibold text-yellow-400 mb-1">Important Objects</h3>
+                <div class="grid grid-cols-3 gap-2 mb-4 text-gray-200">
+                    <span class="bg-gray-700 px-2 py-1 rounded-full text-center text-xs">person</span>
+                    <span class="bg-gray-700 px-2 py-1 rounded-full text-center text-xs">car</span>
+                    <span class="bg-gray-700 px-2 py-1 rounded-full text-center text-xs">truck</span>
+                    <span class="bg-gray-700 px-2 py-1 rounded-full text-center text-xs">bus</span>
+                    <span class="bg-gray-700 px-2 py-1 rounded-full text-center text-xs">motorcycle</span>
+                    <span class="bg-gray-700 px-2 py-1 rounded-full text-center text-xs">bicycle</span>
+                </div>
+
+                <h3 class="text-lg font-semibold text-yellow-400 mb-1">Alert Levels</h3>
+                <div class="space-y-3">
+                    <div>
+                        <p class="font-bold text-yellow-400">🟡 WARNING</p>
+                        <p class="text-gray-400 ml-4">Object is approaching (size increases by > 1.4x)</p>
+                    </div>
+                    <div>
+                        <p class="font-bold text-red-500">🔴 CRITICAL</p>
+                        <p class="text-gray-400 ml-4">Object is approaching fast (size increases by > 2.0x)</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // TTS 큐 관리 시스템 (동영상용)
+        class TTSQueueManager {
+            constructor() {
+                this.queue = [];
+                this.isPlaying = false;
+                this.currentAudio = null;
+                this.priorities = {
+                    'CRITICAL': 3,
+                    'WARNING': 2,
+                    'INFO': 1
+                };
+                this.lastMessages = new Map();
+                this.cooldownTime = 2000; // 2초 쿨다운
+            }
+
+            addMessage(message, alertLevel, objectId = null) {
+                const messageKey = objectId ? `${objectId}-${message}` : message;
+                const now = Date.now();
+                
+                if (this.lastMessages.has(messageKey)) {
+                    const lastTime = this.lastMessages.get(messageKey);
+                    if (now - lastTime < this.cooldownTime) {
+                        addDebugLog(`Video TTS: Duplicate message blocked (${messageKey})`, 'warn');
+                        return false;
+                    }
+                }
+
+                const priority = this.priorities[alertLevel] || 0;
+                const newMessage = {
+                    text: message,
+                    priority,
+                    alertLevel,
+                    objectId,
+                    timestamp: now
+                };
+
+                if (alertLevel === 'CRITICAL' && this.isPlaying) {
+                    this.stopCurrentAudio();
+                    addDebugLog('Video TTS: Critical message - stopping current audio', 'warn');
+                }
+
+                this.insertByPriority(newMessage);
+                this.lastMessages.set(messageKey, now);
+                
+                addDebugLog(`Video TTS: Added to queue - ${alertLevel}: "${message}"`, 'info');
+                
+                if (!this.isPlaying) {
+                    this.playNext();
+                }
+
+                return true;
+            }
+
+            insertByPriority(newMessage) {
+                this.queue = this.queue.filter(msg => 
+                    msg.priority !== newMessage.priority || 
+                    (Date.now() - msg.timestamp) < 3000
+                );
+
+                let inserted = false;
+                for (let i = 0; i < this.queue.length; i++) {
+                    if (newMessage.priority > this.queue[i].priority) {
+                        this.queue.splice(i, 0, newMessage);
+                        inserted = true;
+                        break;
+                    }
+                }
+                
+                if (!inserted) {
+                    this.queue.push(newMessage);
+                }
+
+                if (this.queue.length > 3) {
+                    const removed = this.queue.splice(3);
+                    addDebugLog(`Video TTS: Queue overflow - removed ${removed.length} messages`, 'warn');
+                }
+            }
+
+            async playNext() {
+                if (this.queue.length === 0) {
+                    this.isPlaying = false;
+                    addDebugLog('Video TTS: Queue empty', 'info');
+                    return;
+                }
+
+                const message = this.queue.shift();
+                this.isPlaying = true;
+
+                addDebugLog(`Video TTS: Playing ${message.alertLevel}: "${message.text}"`, 'success');
+
+                try {
+                    const audioBlob = await apiService.generateTts(message.text);
+                    if (audioBlob) {
+                        await this.playAudioBlob(audioBlob);
+                    }
+                } catch (error) {
+                    addDebugLog(`Video TTS: Error playing message: ${error}`, 'error');
+                }
+
+                setTimeout(() => this.playNext(), 100);
+            }
+
+            playAudioBlob(audioBlob) {
+                return new Promise((resolve, reject) => {
+                    this.currentAudio = new Audio();
+                    const audioUrl = URL.createObjectURL(audioBlob);
+                    this.currentAudio.src = audioUrl;
+                    this.currentAudio.volume = 0.8;
+
+                    this.currentAudio.onended = () => {
+                        URL.revokeObjectURL(audioUrl);
+                        this.currentAudio = null;
+                        resolve();
+                    };
+
+                    this.currentAudio.onerror = (error) => {
+                        URL.revokeObjectURL(audioUrl);
+                        this.currentAudio = null;
+                        reject(error);
+                    };
+
+                    this.currentAudio.play().catch(reject);
+                });
+            }
+
+            stopCurrentAudio() {
+                if (this.currentAudio) {
+                    this.currentAudio.pause();
+                    this.currentAudio.currentTime = 0;
+                    this.currentAudio = null;
+                }
+            }
+
+            clearQueue() {
+                this.queue = [];
+                this.stopCurrentAudio();
+                this.isPlaying = false;
+                this.lastMessages.clear();
+                addDebugLog('Video TTS: Queue cleared', 'info');
+            }
+
+            getQueueStatus() {
+                return {
+                    queueLength: this.queue.length,
+                    isPlaying: this.isPlaying,
+                    nextMessage: this.queue.length > 0 ? this.queue[0].text : null
+                };
+            }
+        }
+
+        const ttsManager = new TTSQueueManager();
+
+        function playAudioWithQueue(message, alertLevel, objectId = null) {
+            if (!message || !message.trim()) return;
+            return ttsManager.addMessage(message, alertLevel, objectId);
+        }
+
+        function logTTSQueueStatus() {
+            const status = ttsManager.getQueueStatus();
+            addDebugLog(`Video TTS Queue Status: ${status.queueLength} pending, playing: ${status.isPlaying}, next: "${status.nextMessage}"`, 'info');
+        }
+
+        const videoContainer = document.getElementById('video-container');
+        const videoPlayer = document.getElementById('videoPlayer');
+        const overlayCanvas = document.getElementById('overlayCanvas');
+        const overlayCtx = overlayCanvas.getContext('2d');
+        const videoInput = document.getElementById('videoInput');
+        const fileName = document.getElementById('fileName');
+        const dropZone = document.getElementById('dropZone');
+        const startAnalysisButton = document.getElementById('startAnalysisButton');
+        const stopAnalysisButton = document.getElementById('stopAnalysisButton');
+        const statusMessage = document.getElementById('statusMessage');
+        const caneIcon = document.getElementById('caneIcon');
+        const describeButton = document.getElementById('describeButton');
+        const micButton = document.getElementById('micButton');
+        const helpButton = document.getElementById('helpButton');
+        const helpModal = document.getElementById('helpModal');
+        const closeHelpModal = document.getElementById('closeHelpModal');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const loadingText = document.getElementById('loadingText');
+        const statusText = document.getElementById('statusText');
+        const langSwitchButton = document.getElementById('langSwitchButton');
+        const toggleLogButton = document.getElementById('toggleLogButton');
+        const debugLogContainer = document.getElementById('debugLogContainer');
+        const debugLogElement = document.getElementById('debugLog');
+        const clearLogButton = document.getElementById('clearLogButton');
+        const clearTTSButton = document.getElementById('clearTTSButton');
+
+        let audioContext;
+        let isPlayingAudio = false; // 기존 playAudio 함수용
+        let socket;
+        let isSocketOpen = false;
+        let renderedObjects = {};
+        let animationFrameId;
+        let frameInterval;
+
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let recognition;
+        let currentSpeechLang = 'en-US';
+        const supportedLangs = {
+            'en-US': 'EN',
+            'ko-KR': 'KO'
+        };
+
+        if (SpeechRecognition) {
+            recognition = new SpeechRecognition();
+            recognition.continuous = false;
+            recognition.lang = currentSpeechLang;
+            recognition.interimResults = false;
+            recognition.maxAlternatives = 1;
+            langSwitchButton.textContent = supportedLangs[currentSpeechLang];
+        } else {
+            console.log("Speech Recognition not supported.");
+            micButton.style.display = 'none';
+            langSwitchButton.style.display = 'none';
+        }
+
+        const trackColors = {};
+        const colorPalette = ["#FF5733", "#33FF57", "#3357FF", "#FF33A1", "#A133FF", "#33FFA1", "#FFC300", "#C70039"];
+        function getTrackColor(trackId) { 
+            if (!trackColors[trackId]) { 
+                trackColors[trackId] = colorPalette[Object.keys(trackColors).length % colorPalette.length]; 
+            } 
+            return trackColors[trackId]; 
+        }
+
+        function addDebugLog(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const colors = {
+                'info': 'text-green-400',
+                'warn': 'text-yellow-400',
+                'error': 'text-red-400',
+                'success': 'text-blue-400'
+            };
+            
+            const logEntry = document.createElement('div');
+            logEntry.className = colors[type] || 'text-green-400';
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            
+            debugLogElement.appendChild(logEntry);
+            debugLogElement.scrollTop = debugLogElement.scrollHeight;
+            
+            console.log(`[DEBUG] ${message}`);
+        }
+
+        function logVideoInfo() {
+            addDebugLog(`Video dimensions: ${videoPlayer.videoWidth}x${videoPlayer.videoHeight}`, 'info');
+            addDebugLog(`Client dimensions: ${videoPlayer.clientWidth}x${videoPlayer.clientHeight}`, 'info');
+            addDebugLog(`Canvas dimensions: ${overlayCanvas.width}x${overlayCanvas.height}`, 'info');
+            
+            if (videoPlayer.videoWidth && videoPlayer.clientWidth) {
+                const videoAspectRatio = videoPlayer.videoWidth / videoPlayer.videoHeight;
+                const containerAspectRatio = videoPlayer.clientWidth / videoPlayer.clientHeight;
+                addDebugLog(`Aspect ratios - Video: ${videoAspectRatio.toFixed(3)}, Container: ${containerAspectRatio.toFixed(3)}`, 'info');
+                
+                let actualVideoWidth, actualVideoHeight;
+                if (videoAspectRatio > containerAspectRatio) {
+                    actualVideoWidth = videoPlayer.clientWidth;
+                    actualVideoHeight = videoPlayer.clientWidth / videoAspectRatio;
+                } else {
+                    actualVideoHeight = videoPlayer.clientHeight;
+                    actualVideoWidth = videoPlayer.clientHeight * videoAspectRatio;
+                }
+                addDebugLog(`Actual video render size: ${actualVideoWidth.toFixed(1)}x${actualVideoHeight.toFixed(1)}`, 'info');
+                
+                const offsetX = (videoPlayer.clientWidth - actualVideoWidth) / 2;
+                const offsetY = (videoPlayer.clientHeight - actualVideoHeight) / 2;
+                addDebugLog(`Video offset: X=${offsetX.toFixed(1)}, Y=${offsetY.toFixed(1)}`, 'info');
+            }
+        }
+
+        const apiService = {
+            generateTts: async (text) => {
+                const formData = new URLSearchParams();
+                formData.append('text', text);
+                try {
+                    const response = await fetch('/api/generate_tts', { method: 'POST', body: formData });
+                    if (response.ok) return await response.blob();
+                } catch (error) { console.error('TTS generation error:', error); }
+                return null;
+            },
+            askQuestion: async (question, blob) => {
+                const formData = new FormData();
+                formData.append('question', question);
+                formData.append('file', blob, 'frame.jpg');
+                try {
+                    const response = await fetch('/api/ask_question', { method: 'POST', body: formData });
+                    if (response.ok) return await response.json();
+                } catch (error) { console.error('Question API error:', error); }
+                return null;
+            },
+            describeScene: async (blob) => {
+                const formData = new FormData();
+                formData.append('file', blob, 'scene.jpg');
+                try {
+                    const response = await fetch('/api/describe_scene', { method: 'POST', body: formData });
+                    if (response.ok) return await response.json();
+                } catch (error) { console.error('Describe Scene API error:', error); }
+                return null;
+            }
+        };
+
+        function showLoading(message) {
+            statusText.classList.add('hidden');
+            loadingText.textContent = message;
+            loadingIndicator.classList.remove('hidden');
+            loadingIndicator.classList.add('flex');
+            describeButton.disabled = true;
+            micButton.disabled = true;
+            langSwitchButton.disabled = true;
+        }
+
+        function hideLoading() {
+            loadingIndicator.classList.add('hidden');
+            loadingIndicator.classList.remove('flex');
+            statusText.classList.remove('hidden');
+            if (videoPlayer.src && !videoPlayer.ended) {
+                describeButton.disabled = false;
+                micButton.disabled = false;
+                langSwitchButton.disabled = false;
+            }
+        }
+
+        function drawBoundingBoxes() {
+            if (!videoPlayer.videoWidth) return;
+            
+            overlayCanvas.width = videoPlayer.clientWidth;
+            overlayCanvas.height = videoPlayer.clientHeight;
+            overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+
+            const analyzedWidth = 640;
+            const analyzedHeight = videoPlayer.videoHeight * (analyzedWidth / videoPlayer.videoWidth);
+            const scaleX = videoPlayer.clientWidth / analyzedWidth;
+            const scaleY = videoPlayer.clientHeight / analyzedHeight;
+
+            for (const id in renderedObjects) {
+                const obj = renderedObjects[id];
+                const color = getTrackColor(id);
+                overlayCtx.strokeStyle = color;
+                overlayCtx.lineWidth = 3;
+
+                const x = obj.current.x * scaleX;
+                const y = obj.current.y * scaleY;
+                const width = obj.current.w * scaleX;
+                const height = obj.current.h * scaleY;
+
+                overlayCtx.strokeRect(x, y, width, height);
+                overlayCtx.fillStyle = color;
+
+                let label = `#${id} ${obj.label} (${(obj.confidence * 100).toFixed(1)}%)`;
+                if (obj.direction) label += ` (${obj.direction})`;
+                if (obj.size_ratio) label += ` [${obj.size_ratio.toFixed(1)}x]`;
+
+                overlayCtx.font = '16px sans-serif';
+                const textWidth = overlayCtx.measureText(label).width;
+                overlayCtx.fillRect(x, y - 22, textWidth + 8, 22);
+                overlayCtx.fillStyle = 'white';
+                overlayCtx.fillText(label, x + 4, y - 5);
+            }
+        }
+
+        // 기존 playAudio 함수 (describeButton, micButton용 유지)
+        function playAudio(audioBlob) {
+            if (isPlayingAudio) return;
+            isPlayingAudio = true;
+            const audio = new Audio();
+            const audioUrl = URL.createObjectURL(audioBlob);
+            audio.src = audioUrl;
+            audio.volume = 0.8;
+            audio.onended = () => { URL.revokeObjectURL(audioUrl); isPlayingAudio = false; };
+            audio.onerror = () => { URL.revokeObjectURL(audioUrl); isPlayingAudio = false; };
+            audio.play().catch(e => { console.error("Audio playback failed:", e); isPlayingAudio = false; });
+        }
+
+        function initializeAudioContext() {
+            if (!audioContext) {
+                try {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                } catch (e) {
+                    console.error("Web Audio API is not supported in this browser");
+                }
+            }
+        }
+
+        function playSound(type) {
+            if (!audioContext) return;
+
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+            gainNode.gain.linearRampToValueAtTime(0.5, audioContext.currentTime + 0.01);
+
+            if (type === 'warning') {
+                oscillator.type = 'triangle';
+                oscillator.frequency.setValueAtTime(880, audioContext.currentTime);
+                oscillator.start(audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.00001, audioContext.currentTime + 0.2);
+                oscillator.stop(audioContext.currentTime + 0.2);
+            } else if (type === 'critical') {
+                oscillator.type = 'square';
+                oscillator.frequency.setValueAtTime(1200, audioContext.currentTime);
+                oscillator.start(audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.00001, audioContext.currentTime + 0.1);
+                oscillator.stop(audioContext.currentTime + 0.1);
+
+                setTimeout(() => {
+                    const oscillator2 = audioContext.createOscillator();
+                    const gainNode2 = audioContext.createGain();
+                    oscillator2.connect(gainNode2);
+                    gainNode2.connect(audioContext.destination);
+                    gainNode2.gain.setValueAtTime(0, audioContext.currentTime);
+                    gainNode2.gain.linearRampToValueAtTime(0.5, audioContext.currentTime + 0.01);
+                    oscillator2.type = 'square';
+                    oscillator2.frequency.setValueAtTime(1200, audioContext.currentTime);
+                    oscillator2.start(audioContext.currentTime);
+                    gainNode2.gain.exponentialRampToValueAtTime(0.00001, audioContext.currentTime + 0.1);
+                    oscillator2.stop(audioContext.currentTime + 0.1);
+                }, 150);
+            }
+        }
+
+        function updateStatusUI(alertLevel, message) {
+            hideLoading();
+            statusText.textContent = message || '';
+            statusMessage.classList.remove('text-red-500', 'text-yellow-400', 'text-white', 'font-bold');
+            videoContainer.classList.remove('critical-alert-border');
+            switch (alertLevel) {
+                case 'CRITICAL':
+                    statusText.classList.add('text-red-500', 'font-bold');
+                    videoContainer.classList.add('critical-alert-border');
+                    caneIcon.classList.add('vibrating');
+                    caneIcon.style.filter = 'drop-shadow(0 0 10px #ef4444)';
+                    playSound('critical');
+                    break;
+                case 'WARNING':
+                    statusText.classList.add('text-yellow-400');
+                    videoContainer.classList.remove('critical-alert-border');
+                    caneIcon.classList.add('vibrating');
+                    caneIcon.style.filter = 'drop-shadow(0 0 10px #facc15)';
+                    playSound('warning');
+                    break;
+                case 'INFO':
+                    statusText.classList.add('text-white');
+                    caneIcon.classList.remove('vibrating');
+                    caneIcon.style.filter = 'none';
+                    break;
+                default:
+                    statusText.classList.add('text-white');
+                    caneIcon.classList.remove('vibrating');
+                    caneIcon.style.filter = 'none';
+                    break;
+            }
+        }
+
+        function animate() {
+            if (!videoPlayer.videoWidth) {
+                animationFrameId = requestAnimationFrame(animate);
+                return;
+            }
+            const LERP_FACTOR = 0.2;
+            let needsRedraw = false;
+            for (const id in renderedObjects) {
+                const obj = renderedObjects[id];
+                obj.current.x += (obj.target.x - obj.current.x) * LERP_FACTOR;
+                obj.current.y += (obj.target.y - obj.current.y) * LERP_FACTOR;
+                obj.current.w += (obj.target.w - obj.current.w) * LERP_FACTOR;
+                obj.current.h += (obj.target.h - obj.current.h) * LERP_FACTOR;
+                if (Math.abs(obj.target.x - obj.current.x) > 0.1 || Math.abs(obj.target.y - obj.current.y) > 0.1) {
+                    needsRedraw = true;
+                }
+            }
+            if (needsRedraw) drawBoundingBoxes();
+            animationFrameId = requestAnimationFrame(animate);
+        }
+
+        function sendVideoFrame() {
+            if (!isSocketOpen || videoPlayer.paused || videoPlayer.ended) {
+                return;
+            }
+            
+            const MAX_WIDTH = 640;
+            const scale = MAX_WIDTH / videoPlayer.videoWidth;
+            const captureCanvas = document.createElement('canvas');
+            captureCanvas.width = MAX_WIDTH;
+            captureCanvas.height = videoPlayer.videoHeight * scale;
+            const ctx = captureCanvas.getContext('2d');
+            ctx.drawImage(videoPlayer, 0, 0, captureCanvas.width, captureCanvas.height);
+            
+            captureCanvas.toBlob((blob) => {
+                if (blob && socket.readyState === WebSocket.OPEN) {
+                    socket.send(blob);
+                }
+            }, 'image/jpeg', 0.8);
+        }
+
+        function connectWebSocket() {
+            const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${wsProtocol}//${window.location.host}/api/ws/analyze`;
+            addDebugLog(`Connecting to WebSocket: ${wsUrl}`, 'info');
+            socket = new WebSocket(wsUrl);
+
+            let lastFrameTime = 0;
+            let isWaitingForResponse = false;
+            const MIN_FRAME_INTERVAL = 200; // 동영상용: 200ms 간격 (5fps)
+            const MAX_WAIT_TIME = 1000; // 동영상용: 응답 대기 최대 1초
+
+            function sendVideoFrameIfReady() {
+                const now = Date.now();
+                
+                if (!isSocketOpen || videoPlayer.paused || videoPlayer.ended || !videoPlayer.src) {
+                    return;
+                }
+                
+                if (now - lastFrameTime < MIN_FRAME_INTERVAL) {
+                    return;
+                }
+                
+                if (isWaitingForResponse) {
+                    return;
+                }
+
+                sendVideoFrame();
+                lastFrameTime = now;
+                isWaitingForResponse = true;
+                
+                setTimeout(() => {
+                    if (isWaitingForResponse) {
+                        addDebugLog('Video response timeout, allowing next frame', 'warn');
+                        isWaitingForResponse = false;
+                    }
+                }, MAX_WAIT_TIME);
+            }
+
+            socket.onopen = () => {
+                console.log("WebSocket connected.");
+                addDebugLog('WebSocket connection established', 'success');
+                isSocketOpen = true;
+                updateStatusUI('INFO', 'Analysis started. Play the video to begin.');
+            };
+
+            socket.onmessage = async (event) => {
+                isWaitingForResponse = false;
+                
+                const result = JSON.parse(event.data);
+                addDebugLog(`Received video analysis result: ${result.objects.length} objects (${Date.now() - lastFrameTime}ms)`, 'info');
+                
+                if (result) {
+                    const received_ids = new Set();
+                    result.objects.forEach(obj => {
+                        received_ids.add(obj.track_id.toString());
+                        const newBox = { x: obj.box.x1, y: obj.box.y1, w: obj.box.x2 - obj.box.x1, h: obj.box.y2 - obj.box.y1 };
+                        if (!renderedObjects[obj.track_id]) {
+                            renderedObjects[obj.track_id] = { current: newBox, target: newBox, label: obj.label, confidence: obj.confidence, size_ratio: obj.size_ratio, direction: obj.direction };
+                            addDebugLog(`New video object detected: ${obj.label} (ID: ${obj.track_id})`, 'success');
+                        } else {
+                            renderedObjects[obj.track_id].target = newBox;
+                            renderedObjects[obj.track_id].label = obj.label;
+                            renderedObjects[obj.track_id].confidence = obj.confidence;
+                            renderedObjects[obj.track_id].size_ratio = obj.size_ratio;
+                            renderedObjects[obj.track_id].direction = obj.direction;
+                        }
+                    });
+                    for (const id in renderedObjects) {
+                        if (!received_ids.has(id)) {
+                            addDebugLog(`Video object lost: ID ${id}`, 'warn');
+                            delete renderedObjects[id];
+                        }
+                    }
+                    updateStatusUI(result.alert_level, result.guide_message);
+                    
+                    // TTS 큐 시스템 사용
+                    if (result.guide_message) {
+                        const objectId = result.objects.length > 0 ? result.objects[0].track_id : null;
+                        playAudioWithQueue(result.guide_message, result.alert_level, objectId);
+                    }
+                }
+                
+                setTimeout(sendVideoFrameIfReady, 50);
+            };
+
+            socket.onclose = () => { 
+                console.log("WebSocket disconnected."); 
+                addDebugLog('WebSocket connection closed', 'warn');
+                isSocketOpen = false;
+            };
+            
+            socket.onerror = (error) => { 
+                console.error("WebSocket error:", error); 
+                addDebugLog(`WebSocket error: ${error}`, 'error');
+                updateStatusUI('CRITICAL', 'Connection to server lost.'); 
+                isSocketOpen = false;
+            };
+
+            window.sendVideoFrameIfReady = sendVideoFrameIfReady;
+        }
+
+        function handleVideoFile(file) {
+            if (file && file.type.startsWith('video/')) {
+                const url = URL.createObjectURL(file);
+                videoPlayer.src = url;
+                fileName.textContent = file.name;
+                startAnalysisButton.disabled = false;
+                updateStatusUI('INFO', 'Video loaded. Click "Start Analysis" to begin.');
+                addDebugLog(`Video file loaded: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`, 'success');
+            } else {
+                updateStatusUI('WARNING', 'Please select a valid video file.');
+                addDebugLog('Invalid file type selected', 'error');
+            }
+        }
+
+        videoInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                handleVideoFile(file);
+            } else {
+                fileName.textContent = 'No file selected';
+                startAnalysisButton.disabled = true;
+                updateStatusUI('NONE', 'Please upload a video file to begin analysis.');
+            }
+        });
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('drag-over');
+        });
+
+        dropZone.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            if (!dropZone.contains(e.relatedTarget)) {
+                dropZone.classList.remove('drag-over');
+            }
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                const file = files[0];
+                handleVideoFile(file);
+                
+                const dt = new DataTransfer();
+                dt.items.add(file);
+                videoInput.files = dt.files;
+            }
+        });
+
+        document.addEventListener('dragover', (e) => e.preventDefault());
+        document.addEventListener('drop', (e) => e.preventDefault());
+
+        videoPlayer.addEventListener('loadedmetadata', () => {
+            overlayCanvas.width = videoPlayer.clientWidth;
+            overlayCanvas.height = videoPlayer.clientHeight;
+            addDebugLog('Video metadata loaded', 'success');
+            
+            // 동영상 비율 감지 및 컨테이너 클래스 설정
+            const aspectRatio = videoPlayer.videoWidth / videoPlayer.videoHeight;
+            addDebugLog(`Video aspect ratio: ${aspectRatio.toFixed(3)} (${videoPlayer.videoWidth}x${videoPlayer.videoHeight})`, 'info');
+            
+            if (aspectRatio > 1) {
+                // 16:9 가로 동영상
+                videoContainer.className = videoContainer.className.replace(/\b(landscape|portrait)-video\b/g, '').trim() + ' landscape-video';
+                addDebugLog('Applied landscape video layout (16:9)', 'success');
+            } else {
+                // 9:16 세로 동영상
+                videoContainer.className = videoContainer.className.replace(/\b(landscape|portrait)-video\b/g, '').trim() + ' portrait-video';
+                addDebugLog('Applied portrait video layout (9:16)', 'success');
+            }
+            
+            // 레이아웃 변경 후 캔버스 크기 재조정
+            setTimeout(() => {
+                overlayCanvas.width = videoPlayer.clientWidth;
+                overlayCanvas.height = videoPlayer.clientHeight;
+                logVideoInfo();
+            }, 100);
+        });
+
+        videoPlayer.addEventListener('play', () => {
+            addDebugLog('Video playback started', 'success');
+            if (isSocketOpen) {
+                frameInterval = setInterval(() => {
+                    if (window.sendVideoFrameIfReady) {
+                        window.sendVideoFrameIfReady();
+                    }
+                }, 200);
+                animate();
+                addDebugLog('Video frame sending started (5fps)', 'info');
+            }
+        });
+
+        videoPlayer.addEventListener('pause', () => {
+            addDebugLog('Video playback paused', 'warn');
+            if (frameInterval) {
+                clearInterval(frameInterval);
+                frameInterval = null;
+                addDebugLog('Video frame sending stopped', 'info');
+            }
+        });
+
+        videoPlayer.addEventListener('ended', () => {
+            addDebugLog('Video playback completed', 'success');
+            if (frameInterval) {
+                clearInterval(frameInterval);
+                frameInterval = null;
+            }
+            updateStatusUI('INFO', 'Video playback completed.');
+        });
+
+        startAnalysisButton.addEventListener('click', async () => {
+            initializeAudioContext();
+            addDebugLog('Starting video analysis...', 'info');
+            connectWebSocket();
+            startAnalysisButton.disabled = true;
+            stopAnalysisButton.disabled = false;
+            describeButton.disabled = false;
+            micButton.disabled = false;
+            langSwitchButton.disabled = false;
+        });
+
+        stopAnalysisButton.addEventListener('click', () => {
+            addDebugLog('Stopping video analysis...', 'warn');
+            if (socket) socket.close();
+            if (frameInterval) {
+                clearInterval(frameInterval);
+                frameInterval = null;
+            }
+            cancelAnimationFrame(animationFrameId);
+            renderedObjects = {};
+            overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+            ttsManager.clearQueue(); // TTS 큐 정리
+            startAnalysisButton.disabled = false;
+            stopAnalysisButton.disabled = true;
+            describeButton.disabled = true;
+            micButton.disabled = true;
+            langSwitchButton.disabled = true;
+            updateStatusUI('NONE', 'Analysis stopped.');
+        });
+
+        toggleLogButton.addEventListener('click', () => {
+            if (debugLogContainer.classList.contains('hidden')) {
+                debugLogContainer.classList.remove('hidden');
+                addDebugLog('Debug log opened', 'success');
+                if (videoPlayer.videoWidth) {
+                    logVideoInfo();
+                }
+            } else {
+                debugLogContainer.classList.add('hidden');
+            }
+        });
+
+        clearLogButton.addEventListener('click', () => {
+            debugLogElement.innerHTML = '<div class="text-gray-500">Debug log cleared...</div>';
+        });
+
+        clearTTSButton.addEventListener('click', () => {
+            ttsManager.clearQueue();
+            addDebugLog('Video TTS queue manually cleared', 'success');
+        });
+
+        helpButton.addEventListener('click', () => {
+            helpModal.classList.remove('hidden');
+            helpModal.classList.add('flex');
+        });
+
+        closeHelpModal.addEventListener('click', () => {
+            helpModal.classList.add('hidden');
+            helpModal.classList.remove('flex');
+        });
+
+        helpModal.addEventListener('click', (e) => {
+            if (e.target === helpModal) {
+                helpModal.classList.add('hidden');
+                helpModal.classList.remove('flex');
+            }
+        });
+
+        describeButton.addEventListener('click', async () => {
+            if (isPlayingAudio || !videoPlayer.src) return;
+
+            showLoading('Analyzing the scene...');
+            addDebugLog('Video scene description requested', 'info');
+
+            const MAX_WIDTH = 640;
+            const scale = MAX_WIDTH / videoPlayer.videoWidth;
+            const captureCanvas = document.createElement('canvas');
+            captureCanvas.width = MAX_WIDTH;
+            captureCanvas.height = videoPlayer.videoHeight * scale;
+            captureCanvas.getContext('2d').drawImage(videoPlayer, 0, 0, captureCanvas.width, captureCanvas.height);
+
+            captureCanvas.toBlob(async (blob) => {
+                if (blob) {
+                    const result = await apiService.describeScene(blob);
+                    if (result && result.answer) {
+                        addDebugLog(`Video scene description: "${result.answer}"`, 'success');
+                        updateStatusUI('INFO', result.answer);
+                        const audioBlob = await apiService.generateTts(result.answer);
+                        if (audioBlob) playAudio(audioBlob); // 기존 playAudio 사용
+                    } else {
+                        addDebugLog('Video scene description failed', 'error');
+                        updateStatusUI('WARNING', "Could not describe the scene.");
+                    }
+                } else {
+                    hideLoading();
+                }
+            }, 'image/jpeg', 0.9);
+        });
+
+        if (recognition) {
+            langSwitchButton.addEventListener('click', () => {
+                const langs = Object.keys(supportedLangs);
+                const currentIndex = langs.indexOf(currentSpeechLang);
+                const nextIndex = (currentIndex + 1) % langs.length;
+                currentSpeechLang = langs[nextIndex];
+                recognition.lang = currentSpeechLang;
+                langSwitchButton.textContent = supportedLangs[currentSpeechLang];
+                updateStatusUI('INFO', `Speech recognition language set to ${supportedLangs[currentSpeechLang]}.`);
+                addDebugLog(`Video speech recognition language set to: ${currentSpeechLang}`, 'info');
+                console.log(`Speech recognition language set to: ${currentSpeechLang}`);
+            });
+
+            micButton.addEventListener('click', () => {
+                if (isPlayingAudio || !videoPlayer.src) return;
+                try {
+                    addDebugLog('Starting video speech recognition...', 'info');
+                    recognition.start();
+                } catch (e) {
+                    console.error("Speech recognition start error:", e);
+                    addDebugLog(`Video speech recognition error: ${e.message}`, 'error');
+                    updateStatusUI('WARNING', 'Could not start speech recognition.');
+                }
+            });
+
+            recognition.onstart = () => {
+                addDebugLog('Video speech recognition started', 'success');
+                micButton.classList.add('recording');
+                micButton.classList.remove('bg-purple-600', 'hover:bg-purple-700');
+                micButton.classList.add('bg-blue-500');
+            };
+
+            recognition.onresult = async (event) => {
+                const question = event.results[0][0].transcript;
+                addDebugLog(`Video speech recognized: "${question}"`, 'success');
+
+                showLoading(`Generating answer for "${question}"...`);
+
+                const MAX_WIDTH = 640;
+                const scale = MAX_WIDTH / videoPlayer.videoWidth;
+                const captureCanvas = document.createElement('canvas');
+                captureCanvas.width = MAX_WIDTH;
+                captureCanvas.height = videoPlayer.videoHeight * scale;
+                captureCanvas.getContext('2d').drawImage(videoPlayer, 0, 0, captureCanvas.width, captureCanvas.height);
+
+                captureCanvas.toBlob(async (blob) => {
+                    if (blob) {
+                        const result = await apiService.askQuestion(question, blob);
+                        if (result && result.answer) {
+                            addDebugLog(`Video question answered: "${result.answer}"`, 'success');
+                            updateStatusUI('INFO', result.answer);
+                            const audioBlob = await apiService.generateTts(result.answer);
+                            if (audioBlob) playAudio(audioBlob); // 기존 playAudio 사용
+                        } else {
+                            addDebugLog('Video question answering failed', 'error');
+                            updateStatusUI('WARNING', "Could not find an answer.");
+                        }
+                    } else {
+                        hideLoading();
+                    }
+                }, 'image/jpeg', 0.9);
+            };
+
+            recognition.onend = () => {
+                addDebugLog('Video speech recognition ended', 'info');
+                micButton.classList.remove('recording');
+                micButton.classList.remove('bg-blue-500');
+                micButton.classList.add('bg-purple-600', 'hover:bg-purple-700');
+            };
+
+            recognition.onerror = (event) => {
+                console.error('Speech recognition error:', event.error);
+                addDebugLog(`Video speech recognition error: ${event.error}`, 'error');
+                updateStatusUI('WARNING', 'Speech recognition error occurred.');
+                micButton.classList.remove('recording');
+                micButton.classList.remove('bg-blue-500');
+                micButton.classList.add('bg-purple-600', 'hover:bg-purple-700');
+            };
+        }
+
+        window.addEventListener('resize', () => {
+            addDebugLog('Window resized', 'info');
+            if (videoPlayer.videoWidth) {
+                overlayCanvas.width = videoPlayer.clientWidth;
+                overlayCanvas.height = videoPlayer.clientHeight;
+                drawBoundingBoxes();
+                logVideoInfo();
+            }
+        });
+
+        setInterval(() => {
+            const status = ttsManager.getQueueStatus();
+            if (status.queueLength > 0 || status.isPlaying) {
+                logTTSQueueStatus();
+            }
+        }, 5000);
+    </script>
+</body>
+</html>

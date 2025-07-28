@@ -1,0 +1,1 @@
+uvicorn app.video_demo_main:app --reload --port 5001
