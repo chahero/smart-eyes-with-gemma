@@ -27,11 +27,15 @@ MIN_HISTORY_FOR_ANALYSIS = 5
 IMAGE_WIDTH = 640
 
 try:
+    # GPU 사용을 시도합니다.
     yolo_model = YOLO(settings.YOLO_MODEL_PATH)
-    print(f"YOLO model loaded successfully: {settings.YOLO_MODEL_PATH}")
+    yolo_model.to('cuda')
+    print(f"✅ YOLO model loaded and moved to GPU successfully: {settings.YOLO_MODEL_PATH}")
 except Exception as e:
-    print(f"Failed to load YOLO model: {e}")
-    yolo_model = None
+    # GPU 사용이 실패하면 CPU로 폴백합니다.
+    print(f"⚠️ Warning: Failed to load YOLO model on GPU ({e}). Falling back to CPU.")
+    yolo_model = YOLO(settings.YOLO_MODEL_PATH)
+    yolo_model.to('cpu')
 
 # --- 실시간 영상 분석 관련 함수 ---
 def analyze_image_with_yolo(image_bytes: bytes) -> List[DetectedObject]:    
@@ -88,10 +92,10 @@ def get_risk_based_guide(objects: List[DetectedObject]) -> Dict[str, Any]:
     critical_object = next((obj for obj in objects if obj.is_important and obj.status == "Fast Approaching"), None)
     warning_object = next((obj for obj in objects if obj.is_important and obj.status == "Approaching"), None)
     if critical_object:
-        message = f"CRITICAL! A {critical_object.label} is approaching fast from your {critical_object.direction}. Please stop."
+        message = f"{critical_object.label} is approaching fast from {critical_object.direction}."
         return {"alert_level": AlertLevel.CRITICAL, "guide_message": message}
     if warning_object:
-        message = f"Warning, a {warning_object.label} is approaching from your {warning_object.direction}."
+        message = f"{warning_object.label} is approaching from {warning_object.direction}."
         return {"alert_level": AlertLevel.WARNING, "guide_message": message}
     return {"alert_level": AlertLevel.NONE, "guide_message": None}
 
