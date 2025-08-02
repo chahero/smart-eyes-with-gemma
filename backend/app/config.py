@@ -12,7 +12,7 @@ load_dotenv(dotenv_path=dotenv_path)
 class Settings:
     # YOLO 설정
     YOLO_MODEL_PATH: str = os.getenv('YOLO_MODEL_PATH', 'models/yolov11n.pt')
-    YOLO_CONFIDENCE: float = float(os.getenv('YOLO_CONFIDENCE', 0.5))
+    YOLO_CONFIDENCE: float = float(os.getenv('YOLO_CONFIDENCE', 0.7))
 
     # Ollama (Gemma) 설정
     OLLAMA_HOST: str = os.getenv('OLLAMA_HOST', 'http://localhost:11434')
@@ -24,10 +24,10 @@ class Settings:
     PIPER_MODEL_PATH: str = os.getenv('PIPER_MODEL_PATH', 'piper/en_US-lessac-medium.onnx')
 
     # 중요 객체 목록
-    IMPORTANT_OBJECTS: list = ['person', 'car', 'truck', 'bus', 'motorcycle', 'bicycle', 'chair', 'stairs']
+    IMPORTANT_OBJECTS: list = ['person', 'car', 'truck', 'bus', 'motorcycle', 'bicycle', 'stairs']
 
     # 위험 등급 분석을 위한 설정
-    FAST_APPROACH_THRESHOLD: float = 2.0
-    SLOW_APPROACH_THRESHOLD: float = 1.4
+    FAST_APPROACH_THRESHOLD: float = 2.5
+    SLOW_APPROACH_THRESHOLD: float = 1.7
 
 settings = Settings()
