@@ -1,6 +1,6 @@
 # 파일: backend/app/services.py
 # 역할: YOLO, Ollama, Piper TTS 등 핵심 비즈니스 로직을 수행합니다.
-# [수정] 작업에 따라 텍스트/비전 모델을 분리하여 사용
+# 작업에 따라 텍스트/비전 모델을 분리하여 사용
 
 import cv2
 import numpy as np
@@ -33,9 +33,8 @@ except Exception as e:
     print(f"Failed to load YOLO model: {e}")
     yolo_model = None
 
-# --- 실시간 영상 분석 관련 함수 (변경 없음) ---
-def analyze_image_with_yolo(image_bytes: bytes) -> List[DetectedObject]:
-    # (이전과 동일한 코드)
+# --- 실시간 영상 분석 관련 함수 ---
+def analyze_image_with_yolo(image_bytes: bytes) -> List[DetectedObject]:    
     global object_history
     if yolo_model is None: return []
     try:
@@ -65,15 +64,13 @@ def analyze_image_with_yolo(image_bytes: bytes) -> List[DetectedObject]:
         print(f"Error during YOLO analysis: {e}")
         return []
 
-def analyze_object_direction(bbox: np.ndarray) -> str:
-    # (이전과 동일한 코드)
+def analyze_object_direction(bbox: np.ndarray) -> str:    
     center_x = (bbox[0] + bbox[2]) / 2
     if center_x < IMAGE_WIDTH / 3: return "left"
     elif center_x > IMAGE_WIDTH * 2 / 3: return "right"
     else: return "front"
 
-def analyze_object_status(track_id: int) -> Dict[str, Any]:
-    # (이전과 동일한 코드)
+def analyze_object_status(track_id: int) -> Dict[str, Any]:    
     history = object_history[track_id]["areas"]
     if len(history) < MIN_HISTORY_FOR_ANALYSIS: return {"status": "Detected", "ratio": 1.0}
     mid_point = len(history) // 2
@@ -87,8 +84,7 @@ def analyze_object_status(track_id: int) -> Dict[str, Any]:
     else: status = "Stationary"
     return {"status": status, "ratio": ratio}
 
-def get_risk_based_guide(objects: List[DetectedObject]) -> Dict[str, Any]:
-    # (이전과 동일한 코드)
+def get_risk_based_guide(objects: List[DetectedObject]) -> Dict[str, Any]:    
     critical_object = next((obj for obj in objects if obj.is_important and obj.status == "Fast Approaching"), None)
     warning_object = next((obj for obj in objects if obj.is_important and obj.status == "Approaching"), None)
     if critical_object:
@@ -101,7 +97,6 @@ def get_risk_based_guide(objects: List[DetectedObject]) -> Dict[str, Any]:
 
 
 # --- Ollama 관련 함수 ---
-
 def describe_scene_with_ollama(image_bytes: bytes) -> str:
     """
     Uses Ollama's Vision model to describe the surrounding scene from an image.
@@ -221,9 +216,8 @@ def get_answer_for_question(question: str, image_bytes: bytes) -> str:
             print(f"Ollama question answering request error: {e}")
             return "Sorry, I'm having trouble connecting to the AI."
 
-# --- Piper TTS 관련 함수 (변경 없음) ---
-def generate_tts_audio(text: str) -> Optional[bytes]:
-    # (이전과 동일한 코드)
+# --- Piper TTS 관련 함수 ---
+def generate_tts_audio(text: str) -> Optional[bytes]:    
     if not text or not text.strip(): return None
     command = [settings.PIPER_EXE_PATH, '--model', settings.PIPER_MODEL_PATH, '--output-raw']
     try:
@@ -234,8 +228,7 @@ def generate_tts_audio(text: str) -> Optional[bytes]:
         print(f"Error during TTS processing: {e}")
         return None
 
-def convert_raw_to_wav(raw_data: bytes) -> bytes:
-    # (이전과 동일한 코드)
+def convert_raw_to_wav(raw_data: bytes) -> bytes:    
     wav_buffer = io.BytesIO()
     with wave.open(wav_buffer, 'wb') as wf:
         wf.setnchannels(1)
