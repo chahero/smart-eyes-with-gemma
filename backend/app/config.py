@@ -24,7 +24,8 @@ class Settings:
     PIPER_MODEL_PATH: str = os.getenv('PIPER_MODEL_PATH', 'piper/en_US-lessac-medium.onnx')
 
     # 중요 객체 목록
-    IMPORTANT_OBJECTS: list = ['person', 'car', 'truck', 'bus', 'motorcycle', 'bicycle', 'stairs']
+    #IMPORTANT_OBJECTS: list = ['person', 'car', 'truck', 'bus', 'motorcycle', 'bicycle', 'stairs']
+    IMPORTANT_OBJECTS: list = ['car', 'truck', 'bus', 'motorcycle', 'bicycle']
 
     # 위험 등급 분석을 위한 설정
     FAST_APPROACH_THRESHOLD: float = 2.5
