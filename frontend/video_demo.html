@@ -194,6 +194,9 @@
                     <button id="clearTTSButton" class="bg-yellow-600 hover:bg-yellow-700 text-white text-sm px-3 py-1 rounded transition-colors">
                         Clear TTS
                     </button>
+                    <button id="copyLogButton" class="bg-gray-600 hover:bg-gray-700 text-white text-sm px-3 py-1 rounded transition-colors">
+                        <i class="fas fa-copy mr-1"></i>Copy
+                    </button>
                     <button id="clearLogButton" class="bg-red-600 hover:bg-red-700 text-white text-sm px-3 py-1 rounded transition-colors">
                         Clear
                     </button>
@@ -432,6 +435,7 @@
         const debugLogElement = document.getElementById('debugLog');
         const clearLogButton = document.getElementById('clearLogButton');
         const clearTTSButton = document.getElementById('clearTTSButton');
+        const copyLogButton = document.getElementById('copyLogButton');
 
         let audioContext;
         let isPlayingAudio = false; // 기존 playAudio 함수용
@@ -1006,6 +1010,24 @@
         clearTTSButton.addEventListener('click', () => {
             ttsManager.clearQueue();
             addDebugLog('Video TTS queue manually cleared', 'success');
+        });
+
+        copyLogButton.addEventListener('click', async () => {
+            const logText = debugLogElement.textContent;
+            try {
+                await navigator.clipboard.writeText(logText);
+                addDebugLog('Debug log content copied to clipboard!', 'success');
+                
+                // 시각적 피드백
+                copyLogButton.classList.remove('bg-gray-600', 'hover:bg-gray-700');
+                copyLogButton.classList.add('bg-green-600');
+                setTimeout(() => {
+                    copyLogButton.classList.remove('bg-green-600');
+                    copyLogButton.classList.add('bg-gray-600', 'hover:bg-gray-700');
+                }, 1000);
+            } catch (err) {
+                addDebugLog('Failed to copy debug log content: ' + err, 'error');
+            }
         });
 
         helpButton.addEventListener('click', () => {
