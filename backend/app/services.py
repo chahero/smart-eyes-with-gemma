@@ -145,10 +145,10 @@ def get_answer_for_question(question: str, image_bytes: bytes) -> str:
     Analyzes the user's question and answers image-related questions with the Vision model,
     and general questions with the Text model.
     """
-    # [수정] OCR_KEYWORDS에 영어 키워드 추가
+    # OCR_KEYWORDS에 영어 키워드 추가
     OCR_KEYWORDS = [
-        "읽어줘", "써 있어", "글자", "표지판", "내용", "보여", "보이니", # 한국어
-        "read", "text", "sign", "what does it say", "label", "writing", "show me", "can you see" # 영어
+        "읽어줘", "써 있어", "글자", "표지판", "내용", "보여", "보이니",  # 한국어
+        "read", "text", "sign", "what does it say", "label", "writing", "show me", "can you see", "what do you see" # 영어
     ]
     trigger_ocr = any(keyword in question.lower() for keyword in OCR_KEYWORDS) # 질문을 소문자로 변환하여 비교
 
@@ -158,7 +158,7 @@ def get_answer_for_question(question: str, image_bytes: bytes) -> str:
         try:
             image_b64 = image_to_base64(image_bytes)
             
-            # [수정] 프롬프트 수정: 직접적인 답변 유도
+            # 프롬프트 수정: 직접적인 답변 유도
             prompt = f"Answer the user's question based on the image. Be direct and concise. Question: {question}"
 
             payload = {
