@@ -152,8 +152,8 @@
         <div id="video-container" class="bg-black rounded-lg shadow-lg overflow-hidden">
             <video id="videoPlayer" class="w-full h-auto" controls></video>
             <canvas id="overlayCanvas"></canvas>
-            <div id="cane-container" class="absolute top-4 right-4 z-10">
-                <img id="caneIcon" src="assets/cane_icon.png" alt="Cane Icon" class="w-16 h-16 md:w-24 md:h-24 opacity-70">
+            <div id="eyes-container" class="absolute top-4 right-4 z-10">
+                <img id="eyesIcon" src="assets/eyes_icon.svg" alt="Smart Eyes Icon" class="w-16 h-16 md:w-24 md:h-24 opacity-70">
             </div>
         </div>
 
@@ -426,7 +426,7 @@
         const startAnalysisButton = document.getElementById('startAnalysisButton');
         const stopAnalysisButton = document.getElementById('stopAnalysisButton');
         const statusMessage = document.getElementById('statusMessage');
-        const caneIcon = document.getElementById('caneIcon');
+        const eyesIcon = document.getElementById('eyesIcon');
         const describeButton = document.getElementById('describeButton');
         const micButton = document.getElementById('micButton');
         const helpButton = document.getElementById('helpButton');
@@ -688,26 +688,26 @@
                 case 'CRITICAL':
                     statusText.classList.add('text-red-500', 'font-bold');
                     videoContainer.classList.add('critical-alert-border');
-                    caneIcon.classList.add('vibrating');
-                    caneIcon.style.filter = 'drop-shadow(0 0 10px #ef4444)';
+                    eyesIcon.classList.add('vibrating');
+                    eyesIcon.style.filter = 'drop-shadow(0 0 10px #ef4444)';
                     playSound('critical');
                     break;
                 case 'WARNING':
                     statusText.classList.add('text-yellow-400');
                     videoContainer.classList.remove('critical-alert-border');
-                    caneIcon.classList.add('vibrating');
-                    caneIcon.style.filter = 'drop-shadow(0 0 10px #facc15)';
+                    eyesIcon.classList.add('vibrating');
+                    eyesIcon.style.filter = 'drop-shadow(0 0 10px #facc15)';
                     playSound('warning');
                     break;
                 case 'INFO':
                     statusText.classList.add('text-white');
-                    caneIcon.classList.remove('vibrating');
-                    caneIcon.style.filter = 'none';
+                    eyesIcon.classList.remove('vibrating');
+                    eyesIcon.style.filter = 'none';
                     break;
                 default:
                     statusText.classList.add('text-white');
-                    caneIcon.classList.remove('vibrating');
-                    caneIcon.style.filter = 'none';
+                    eyesIcon.classList.remove('vibrating');
+                    eyesIcon.style.filter = 'none';
                     break;
             }
         }
