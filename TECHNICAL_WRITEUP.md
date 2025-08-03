@@ -229,7 +229,7 @@ Our project strategically leverages the distinct capabilities of Gemma 3n and Ge
     ```python
     OCR_KEYWORDS = [
         "읽어줘", "써 있어", "글자", "표지판", "내용", "보여", "보이니", # Korean
-        "read", "text", "sign", "what does it say", "label", "writing", "show me", "can you see" # English
+        "read", "text", "sign", "what does it say", "label", "writing", "show me", "can you see", "do you see" # English
     ]
     trigger_ocr = any(keyword in question.lower() for keyword in OCR_KEYWORDS)
     ```

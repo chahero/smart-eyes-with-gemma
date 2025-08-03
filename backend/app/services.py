@@ -148,7 +148,7 @@ def get_answer_for_question(question: str, image_bytes: bytes) -> str:
     # OCR_KEYWORDS에 영어 키워드 추가
     OCR_KEYWORDS = [
         "읽어줘", "써 있어", "글자", "표지판", "내용", "보여", "보이니",  # 한국어
-        "read", "text", "sign", "what does it say", "label", "writing", "show me", "can you see", "what do you see" # 영어
+        "read", "text", "sign", "what does it say", "label", "writing", "show me", "can you see", "do you see" # 영어
     ]
     trigger_ocr = any(keyword in question.lower() for keyword in OCR_KEYWORDS) # 질문을 소문자로 변환하여 비교
 
